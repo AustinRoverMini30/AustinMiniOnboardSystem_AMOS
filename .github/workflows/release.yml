@@ -16,12 +16,12 @@ jobs:
           python-version: '3.11'
 
       - name: Create ZIP (sans .venv)
-        run: zip -r MiniOS_${{ github.ref_name }}.zip ./ -x "*.venv/*" -x "*.git*" -x "*.idea*"
+        run: zip -r AustinMiniOnboardSystem_AMOS_${{ github.ref_name }}.zip ./ -x "*.venv/*" -x "*.git*" -x "*.idea*"
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: MiniOS_${{ github.ref_name }}.zip
+          files: AustinMiniOnboardSystem_AMOS_${{ github.ref_name }}.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

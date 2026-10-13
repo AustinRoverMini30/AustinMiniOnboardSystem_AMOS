@@ -22,7 +22,7 @@ def get_latest_version_from_github(repo_owner, repo_name):
 
 def check_for_updates():
     current_version = get_current_version()
-    latest_version = get_latest_version_from_github("AustinRoverMini30", "MiniOS")
+    latest_version = get_latest_version_from_github("AustinRoverMini30", "AustinMiniOnboardSystem_AMOS")
 
     if latest_version and latest_version != current_version:
         print(f"Une nouvelle version est disponible : {latest_version} (vous avez {current_version})")
@@ -52,7 +52,7 @@ def download_latest_release(version, progress_callback=None, status_callback=Non
 
     print(version)
     # URL de la release (remplace par l'URL de ton ZIP)
-    release_url = f"https://github.com/AustinRoverMini30/MiniOS/archive/refs/tags/v{version}.zip"
+    release_url = f"https://github.com/AustinRoverMini30/AustinMiniOnboardSystem_AMOS/archive/refs/tags/v{version}.zip"
 
     try:
         response = requests.get(release_url, stream=True)
@@ -88,7 +88,7 @@ def download_latest_release(version, progress_callback=None, status_callback=Non
 
         # Extraire le ZIP directement à la racine du projet
         with zipfile.ZipFile(io.BytesIO(content)) as zip_file:
-            # Détecter s'il y a un dossier racine unique dans l'archive (ex: MiniOS-<tag>/...)
+            # Détecter s'il y a un dossier racine unique dans l'archive (ex: AustinMiniOnboardSystem_AMOS-<tag>/...)
             all_names = [name for name in zip_file.namelist() if name and not name.endswith('/')]
             first_components = [name.split('/', 1)[0] for name in zip_file.namelist() if name]
             root_folder = None

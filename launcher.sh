@@ -5,6 +5,6 @@ while [ -z "$WAYLAND_DISPLAY" ] && [ -z "$DISPLAY" ]; do
 done
 
 # Aller dans le dossier du projet
-cd /home/nicolas/Téléchargements/MiniOS/src
+cd /home/nicolas/Téléchargements/AustinMiniOnboardSystem_AMOS/src
 # Lancer l'app
 /usr/bin/python3 main.py
