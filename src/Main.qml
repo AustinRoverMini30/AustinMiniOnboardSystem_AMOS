@@ -50,4 +50,45 @@ Window {
         count: swipe.count
         currentIndex: swipe.currentIndex
     }
+
+    Row {
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 24
+        spacing: 24
+
+        Button {
+            id: fanButton
+            width: 64
+            height: 64
+            checkable: true
+
+            icon.source: "../assets/fan.png"
+            icon.width: 32
+            icon.height: 32
+            icon.color: checked ? "#111418" : "#ffffff"
+
+            background: Rectangle {
+                radius: width / 2
+                color: fanButton.checked ? "#3ecf8e" : "#252a31"
+            }
+        }
+
+        Button {
+            id: onOffButton
+            width: 64
+            height: 64
+            checkable: true
+
+            icon.source: "../assets/on-off-button.png"
+            icon.width: 32
+            icon.height: 32
+            icon.color: checked ? "#111418" : "#ffffff"
+
+            background: Rectangle {
+                radius: width / 2
+                color: onOffButton.checked ? "#3ecf8e" : "#252a31"
+            }
+        }
+    }
 }

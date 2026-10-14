@@ -1,9 +1,20 @@
 import sys
 from pathlib import Path
-from PySide6.QtCore import QObject, QTimer, Property, Signal
+from PySide6.QtCore import QObject, QTimer, Property, Signal, Slot
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 
+from gpiozero import OutputDevice
+from gpiozero.exc import BadPinFactory
+
+pc_dev = False
+FAN_PIN = 18
+
+try:
+    fan = OutputDevice(FAN_PIN, active_high=False, initial_value=False)
+except BadPinFactory:
+    fan = None
+    pc_dev = True
 
 class Backend(QObject):
     cpuTempChanged = Signal()
@@ -39,6 +50,10 @@ class Backend(QObject):
     def speed(self):
         return self._speed
 
+    @Slot(bool)
+    def setFan(self, state):
+        if fan:
+            fan.on() if state else fan.off()
 
 app = QGuiApplication(sys.argv)
 engine = QQmlApplicationEngine()
