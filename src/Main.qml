@@ -59,35 +59,80 @@ Window {
 
         Button {
             id: fanButton
-            width: 64
-            height: 64
+            width: 120
+            height: 60
             checkable: true
 
-            icon.source: "../assets/fan.png"
-            icon.width: 32
-            icon.height: 32
-            icon.color: checked ? "#111418" : "#ffffff"
+            contentItem: Image {
+                anchors.centerIn: parent
+                width: 32
+                height: 32
+                source: "../assets/fan.png"
+                fillMode: Image.PreserveAspectFit
+                RotationAnimator on rotation {
+                    from: 0
+                    to: 360
+                    duration: 1000
+                    loops: Animation.Infinite
+                    running: fanButton.checked
+                }
+            }
 
             background: Rectangle {
-                radius: width / 2
+                radius: 10
                 color: fanButton.checked ? "#3ecf8e" : "#252a31"
             }
         }
 
         Button {
             id: onOffButton
-            width: 64
-            height: 64
-            checkable: true
+            width: 120
+            height: 60
 
             icon.source: "../assets/on-off-button.png"
             icon.width: 32
             icon.height: 32
-            icon.color: checked ? "#111418" : "#ffffff"
+            icon.color: "#ffffff"
+            onClicked: powerDialog.open()
 
             background: Rectangle {
-                radius: width / 2
-                color: onOffButton.checked ? "#3ecf8e" : "#252a31"
+                radius: 10
+                color: "#252a31"
+            }
+        }
+    }
+
+    Dialog {
+        id: powerDialog
+        title: "Alimentation"
+        modal: true
+        anchors.centerIn: parent
+        width: 360
+        padding: 24
+
+        contentItem: ColumnLayout {
+            spacing: 20
+
+            RowLayout {
+                Layout.alignment: Qt.AlignHCenter
+                spacing: 12
+
+                Button {
+                    width: 100
+                    height: 60
+                    icon.source: "../assets/on-off-button.png"
+                    icon.width: 32
+                    icon.height: 32
+                    icon.color: "#ffffff"
+                    onClicked: {
+                        powerDialog.close()
+                        backend.shutdown()
+                    }
+                    background: Rectangle {
+                        radius: 10
+                        color: "#252a31"
+                    }
+                }
             }
         }
     }

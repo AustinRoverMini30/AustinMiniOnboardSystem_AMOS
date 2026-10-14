@@ -1,6 +1,7 @@
 import sys
+import subprocess
 from pathlib import Path
-from PySide6.QtCore import QObject, QTimer, Property, Signal, Slot
+from PySide6.QtCore import QObject, QCoreApplication, QTimer, Property, Signal, Slot
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 
@@ -54,6 +55,20 @@ class Backend(QObject):
     def setFan(self, state):
         if fan:
             fan.on() if state else fan.off()
+
+    @Slot()
+    def shutdown(self):
+        if pc_dev:
+            QCoreApplication.quit()
+            return
+        subprocess.Popen(["sudo", "shutdown", "-h", "now"])
+
+    @Slot()
+    def restart(self):
+        if pc_dev:
+            QCoreApplication.quit()
+            return
+        subprocess.Popen(["sudo", "reboot"])
 
 app = QGuiApplication(sys.argv)
 engine = QQmlApplicationEngine()
