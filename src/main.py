@@ -80,7 +80,7 @@ class Backend(QObject):
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._update)
-        self._timer.start(500)
+        self._timer.start(300)
 
     def _read_temp(self):
         try:

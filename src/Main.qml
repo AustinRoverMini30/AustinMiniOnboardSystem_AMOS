@@ -55,7 +55,6 @@ Window {
         }
 
         function needleRotation() {
-            // pygame.rotate() and Qt Quick rotate in opposite directions.
             return -(50 - (clampedValue() * 25 / 10))
         }
 
