@@ -4,6 +4,7 @@ import sys
 import threading
 from pathlib import Path
 
+import psutil
 from PySide6.QtCore import (
     QObject,
     QCoreApplication,
@@ -40,6 +41,7 @@ except BadPinFactory:
 class Backend(QObject):
     cpuTempChanged = Signal()
     speedChanged = Signal()
+    gaugesChanged = Signal()
     updateStateChanged = Signal()
     updateCheckResult = Signal(str, str)
     updateDownloadResult = Signal(bool, str)
@@ -51,6 +53,7 @@ class Backend(QObject):
         super().__init__()
         self._temp = 0.0
         self._speed = 0
+        self._ram = 0.0
         self._tick = 0
         self._current_version = get_current_version()
         self._latest_version = ""
@@ -89,8 +92,10 @@ class Backend(QObject):
         self._tick += 1
         self._temp = self._read_temp()
         self._speed = abs(int(60 * math.sin(self._tick / 8)))
+        self._ram = psutil.virtual_memory().percent
         self.cpuTempChanged.emit()
         self.speedChanged.emit()
+        self.gaugesChanged.emit()
 
     @Property(float, notify=cpuTempChanged)
     def cpuTemp(self):
@@ -99,6 +104,18 @@ class Backend(QObject):
     @Property(int, notify=speedChanged)
     def speed(self):
         return self._speed
+
+    @Property(float, notify=gaugesChanged)
+    def ramUsage(self):
+        return self._ram
+
+    @Property(float, notify=gaugesChanged)
+    def temperature(self):
+        return self._temp
+
+    @Property(float, notify=gaugesChanged)
+    def cpuUsage(self):
+        return psutil.cpu_percent(interval=None)
 
     @Property(str, notify=updateStateChanged)
     def currentVersion(self):

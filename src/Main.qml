@@ -42,6 +42,64 @@ Window {
         }
     }
 
+    component GaugeView: Item {
+        id: gaugeView
+        property url gaugeSource
+        property string title: ""
+        property real value: 0
+        property real maximum: 100
+        property real gaugeSize: Math.min(width, height - 44)
+
+        function clampedValue() {
+            return Math.max(0, Math.min(value, maximum))
+        }
+
+        function needleRotation() {
+            // pygame.rotate() and Qt Quick rotate in opposite directions.
+            return -(50 - (clampedValue() * 25 / 10))
+        }
+
+        Image {
+            id: gaugeImage
+            anchors.top: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: gaugeView.gaugeSize
+            height: width
+            source: gaugeView.gaugeSource
+            fillMode: Image.PreserveAspectFit
+            smooth: true
+        }
+
+        Image {
+            anchors.centerIn: gaugeImage
+            width: gaugeImage.width * 0.88
+            height: width * 0.17
+            source: "../assets/Aiguille.png"
+            fillMode: Image.PreserveAspectFit
+            smooth: true
+            transformOrigin: Item.Center
+            rotation: gaugeView.needleRotation()
+        }
+
+        Text {
+            anchors.top: gaugeImage.bottom
+            anchors.topMargin: 6
+            anchors.horizontalCenter: parent.horizontalCenter
+            color: "#ffffff"
+            font.pixelSize: 17
+            font.weight: Font.Medium
+            text: gaugeView.title
+        }
+
+        Text {
+            anchors.top: parent.top
+            anchors.right: parent.right
+            color: "#8a93a0"
+            font.pixelSize: 14
+            text: gaugeView.value.toFixed(0) + (gaugeView.title === "TEMPÉRATURE" ? " °C" : " %")
+        }
+    }
+
         // Champ de saisie lecture seule, piloté par le pavé numérique
     component JournalField: TextField {
         id: field
@@ -116,7 +174,58 @@ Window {
             }
         }
 
-        // Page 2 : carnet de bord
+        // Page 2 : cadrans
+        Item {
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.topMargin: 24
+                anchors.bottomMargin: 108
+                anchors.leftMargin: 18
+                anchors.rightMargin: 18
+                spacing: 12
+
+                Text {
+                    Layout.alignment: Qt.AlignHCenter
+                    color: "#ffffff"
+                    font.pixelSize: 34
+                    font.weight: Font.DemiBold
+                    text: "Informations système"
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    spacing: 16
+
+                    GaugeView {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        gaugeSource: "../assets/Compteur.png"
+                        title: "TEMPÉRATURE"
+                        value: backend.temperature
+                        maximum: 100
+                    }
+                    GaugeView {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        gaugeSource: "../assets/CompteurCpu.png"
+                        title: "CPU"
+                        value: backend.cpuUsage
+                        maximum: 100
+                    }
+                    GaugeView {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        gaugeSource: "../assets/CompteurRam.png"
+                        title: "RAM"
+                        value: backend.ramUsage
+                        maximum: 100
+                    }
+                }
+            }
+        }
+
+        // Page 3 : carnet de bord
         Item {
             id: journalPage
             property TextField activeField: mileageField
