@@ -125,14 +125,4 @@ def download_latest_release(version, progress_callback=None, status_callback=Non
 
 
 def restart_application():
-    launcher_path = PROJECT_ROOT / "launcher.sh"
-    if not launcher_path.exists():
-        raise FileNotFoundError(f"{launcher_path} introuvable")
-    launcher_path.chmod(launcher_path.stat().st_mode | 0o111)
-    subprocess.Popen(
-        [str(launcher_path)],
-        cwd=PROJECT_ROOT,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        start_new_session=True,
-    )
+    subprocess.Popen(["sudo", "reboot"])
