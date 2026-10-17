@@ -608,10 +608,7 @@ Window {
         DashButton {
             id: fanButton
             checkable: true
-
-            onClicked: {
-                backend.setFanState(fanButton.checked)
-            }
+            onToggled: backend.setFan(checked)
 
             contentItem: Item {
                 Image {
