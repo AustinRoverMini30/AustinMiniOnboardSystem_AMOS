@@ -16,6 +16,9 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QCursor
+
 from gpiozero import OutputDevice
 from gpiozero.exc import BadPinFactory
 
@@ -27,7 +30,6 @@ from UpdateUtility import (
 )
 from KilometerManager import calculate_consumption_stats, load_entries, save_entry
 
-
 pc_dev = False
 FAN_PIN = 18
 
@@ -36,7 +38,6 @@ try:
 except BadPinFactory:
     fan = None
     pc_dev = True
-
 
 class Backend(QObject):
     cpuTempChanged = Signal()
@@ -316,6 +317,10 @@ class Backend(QObject):
 
 
 app = QGuiApplication(sys.argv)
+
+if app.platformName() in ("eglfs", "linuxfb"):
+    app.setOverrideCursor(QCursor(Qt.BlankCursor))
+
 engine = QQmlApplicationEngine()
 backend = Backend()
 engine.rootContext().setContextProperty("backend", backend)
