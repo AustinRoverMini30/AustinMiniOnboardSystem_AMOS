@@ -1,8 +1,12 @@
 name: Release
+
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
+
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -10,18 +14,50 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Lire la version
+        id: version
+        run: |
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          VERSION="${VERSION#v}"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::Contenu de VERSION invalide : '$VERSION'"
+            exit 1
+          fi
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Vérifier si la release existe déjà
+        id: exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "La release $TAG existe déjà : rien à faire (pensez à incrémenter VERSION)."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Set up Python
+        if: steps.exists.outputs.exists != 'true'
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
       - name: Create ZIP (sans .venv)
-        run: zip -r MiniOS_${{ github.ref_name }}.zip ./ -x "*.venv/*" -x "*.git*" -x "*.idea*"
+        if: steps.exists.outputs.exists != 'true'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: zip -r "AustinMiniOnboardSystem_AMOS_${TAG}.zip" ./ -x "*.venv/*" -x "*venv/*" -x "*__pycache__/*" -x "*.git*" -x "*.idea*"
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        if: steps.exists.outputs.exists != 'true'
+        uses: softprops/action-gh-release@v2
         with:
-          files: MiniOS_${{ github.ref_name }}.zip
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ steps.version.outputs.tag }}
+          files: AustinMiniOnboardSystem_AMOS_${{ steps.version.outputs.tag }}.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

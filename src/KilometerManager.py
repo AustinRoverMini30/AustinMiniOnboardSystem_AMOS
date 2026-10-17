@@ -1,7 +1,6 @@
 import csv
 import os
 from datetime import datetime
-import pygame
 
 # Obtenir le chemin absolu du dossier data
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
