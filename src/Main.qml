@@ -609,6 +609,10 @@ Window {
             id: fanButton
             checkable: true
 
+            onClicked: {
+                backend.setFanState(fanButton.checked)
+            }
+
             contentItem: Item {
                 Image {
                     anchors.centerIn: parent
