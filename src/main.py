@@ -34,7 +34,7 @@ pc_dev = False
 FAN_PIN = 18
 
 try:
-    fan = OutputDevice(FAN_PIN, active_high=False, initial_value=False)
+    fan = OutputDevice(FAN_PIN, active_high=True, initial_value=False)
 except BadPinFactory:
     fan = None
     pc_dev = True
