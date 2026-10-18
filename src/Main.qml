@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtMultimedia
 
 Window {
     width: 800; height: 480
@@ -687,5 +688,54 @@ Window {
                 }
             }
         }
+    }
+
+        // Écran de démarrage vidéo
+    Rectangle {
+        id: splash
+        anchors.fill: parent
+        color: "black"
+        z: 100
+
+        function finish() {
+            if (!visible) return
+            player.stop()
+            player.source = ""          // libère le décodeur et la mémoire
+            fadeOut.start()
+        }
+
+        MediaPlayer {
+            id: player
+            source: Qt.resolvedUrl("../assets/mini_thirty_boot_800x480.mp4")
+            videoOutput: video
+            onMediaStatusChanged: if (mediaStatus === MediaPlayer.EndOfMedia) splash.finish()
+            onErrorOccurred: function(error, errorString) {
+                console.warn("Splash vidéo :", errorString)
+                splash.finish()
+            }
+        }
+
+        VideoOutput {
+            id: video
+            anchors.fill: parent
+            fillMode: VideoOutput.PreserveAspectCrop
+        }
+
+        // Toucher l'écran passe l'animation
+        MouseArea { anchors.fill: parent; onClicked: splash.finish() }
+
+        // Filet de sécurité : si la vidéo ne démarre pas, on n'attend pas indéfiniment
+        Timer {
+            interval: 8000; running: true
+            onTriggered: splash.finish()
+        }
+
+        NumberAnimation {
+            id: fadeOut
+            target: splash; property: "opacity"; to: 0; duration: 400
+            onFinished: splash.visible = false
+        }
+
+        Component.onCompleted: player.play()
     }
 }

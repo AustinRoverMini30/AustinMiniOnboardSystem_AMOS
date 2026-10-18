@@ -11,10 +11,11 @@ from PySide6.QtCore import (
     QTimer,
     Property,
     Signal,
-    Slot,
+    Slot, QUrl,
 )
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
+from PySide6.QtMultimedia import *
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCursor
@@ -324,6 +325,7 @@ if app.platformName() in ("eglfs", "linuxfb"):
 engine = QQmlApplicationEngine()
 backend = Backend()
 engine.rootContext().setContextProperty("backend", backend)
+
 engine.load(Path(__file__).parent / "Main.qml")
 if not engine.rootObjects():
     sys.exit(1)
