@@ -612,43 +612,61 @@ Window {
                     }
                 }
 
-                ListView {
+                GridView {
+                    id: bootVideoGrid
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     clip: true
-                    spacing: 8
+                    cellWidth: width / 3
+                    cellHeight: 174
                     model: backend.bootVideos
                     boundsBehavior: Flickable.StopAtBounds
                     ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
                     delegate: Rectangle {
                         readonly property bool selected: modelData.file === backend.bootVideoFile
-                        width: ListView.view.width
-                        height: 56
-                        radius: 12
+                        width: bootVideoGrid.cellWidth - 12
+                        height: bootVideoGrid.cellHeight - 12
+                        radius: 10
                         color: selected ? "#16301f" : "#1b2027"
                         border.width: selected ? 2 : 1
                         border.color: selected ? "#3ecf8e" : "#2c333c"
 
-                        RowLayout {
-                            anchors.fill: parent
-                            anchors.leftMargin: 16
-                            anchors.rightMargin: 16
-
-                            Text {
-                                Layout.fillWidth: true
-                                color: "#ffffff"
-                                font.pixelSize: 20
-                                elide: Text.ElideRight
-                                text: modelData.name
-                            }
-                            Text {
-                                visible: selected
-                                color: "#3ecf8e"
-                                font.pixelSize: 24
-                                text: "✓"
-                            }
+                        Image {
+                            anchors.top: parent.top
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            height: width * 9 / 16
+                            source: modelData.thumbnail
+                            fillMode: Image.PreserveAspectCrop
+                            clip: true
+                            smooth: true
                         }
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            anchors.topMargin: 112
+                            anchors.leftMargin: 10
+                            anchors.rightMargin: 10
+                            color: "#ffffff"
+                            font.pixelSize: 17
+                            elide: Text.ElideRight
+                            text: modelData.name
+                        }
+
+                        Text {
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            anchors.rightMargin: 10
+                            anchors.bottomMargin: 7
+                            visible: selected
+                            color: "#3ecf8e"
+                            font.pixelSize: 20
+                            text: "✓"
+                        }
+
                         TapHandler { onTapped: backend.setBootVideo(modelData.file) }
                     }
                 }

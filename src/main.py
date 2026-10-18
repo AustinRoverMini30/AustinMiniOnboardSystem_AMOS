@@ -35,6 +35,7 @@ pc_dev = False
 FAN_PIN = 18
 
 BOOT_DIR = Path(__file__).resolve().parent.parent / "assets" / "boot"   # à adapter à ton arborescence
+THUMBNAIL_DIR = Path(__file__).resolve().parent.parent / "assets" / "boot" / "thumbnails"
 settings = QSettings("AMOS", "MiniDash")
 
 try:
@@ -182,9 +183,24 @@ class Backend(QObject):
                 return f
         return files[0] if files else None   # par défaut : la première
 
+    def _thumbnail_file(self, video_file):
+        matches = sorted(THUMBNAIL_DIR.glob(f"{video_file.stem}.*"))
+        return matches[0] if matches else None
+
     @Property("QVariantList", notify=bootVideoChanged)
     def bootVideos(self):
-        return [{"name": f.stem.replace("_", " "), "file": f.name} for f in self._boot_files()]
+        return [
+            {
+                "name": f.stem.replace("_", " "),
+                "file": f.name,
+                "thumbnail": (
+                    QUrl.fromLocalFile(str(thumbnail))
+                    if (thumbnail := self._thumbnail_file(f))
+                    else QUrl()
+                ),
+            }
+            for f in self._boot_files()
+        ]
 
     @Property(str, notify=bootVideoChanged)
     def bootVideoFile(self):
