@@ -11,13 +11,13 @@ from PySide6.QtCore import (
     QTimer,
     Property,
     Signal,
-    Slot, QUrl,
+    Slot,
+    QSettings,
+    QUrl,
+    Qt
 )
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
-from PySide6.QtMultimedia import *
-
-from PySide6.QtCore import Qt
 from PySide6.QtGui import QCursor
 
 from gpiozero import OutputDevice
@@ -33,6 +33,9 @@ from KilometerManager import calculate_consumption_stats, load_entries, save_ent
 
 pc_dev = False
 FAN_PIN = 18
+
+BOOT_DIR = Path(__file__).resolve().parent.parent / "assets" / "boot"   # à adapter à ton arborescence
+settings = QSettings("AMOS", "MiniDash")
 
 try:
     fan = OutputDevice(FAN_PIN, active_high=False, initial_value=False)
@@ -50,6 +53,7 @@ class Backend(QObject):
     updateProgressResult = Signal(float)
     updateStatusResult = Signal(str)
     journalChanged = Signal()
+    bootVideoChanged = Signal()
 
     def __init__(self):
         super().__init__()
@@ -166,6 +170,39 @@ class Backend(QObject):
     @Property(float, notify=journalChanged)
     def journalTotalPrice(self):
         return self._journal_total_price
+
+    def _boot_files(self):
+        return sorted(BOOT_DIR.glob("*.mp4"))
+
+    def _current_boot_file(self):
+        files = self._boot_files()
+        wanted = settings.value("bootVideo", "")
+        for f in files:
+            if f.name == wanted:
+                return f
+        return files[0] if files else None   # par défaut : la première
+
+    @Property("QVariantList", notify=bootVideoChanged)
+    def bootVideos(self):
+        return [{"name": f.stem.replace("_", " "), "file": f.name} for f in self._boot_files()]
+
+    @Property(str, notify=bootVideoChanged)
+    def bootVideoFile(self):
+        f = self._current_boot_file()
+        return f.name if f else ""
+
+    @Property(QUrl, notify=bootVideoChanged)
+    def bootVideoUrl(self):
+        f = self._current_boot_file()
+        return QUrl.fromLocalFile(str(f)) if f else QUrl()
+
+    @Slot(str)
+    def setBootVideo(self, file):
+        name = Path(file).name
+        if (BOOT_DIR / name).is_file():
+            settings.setValue("bootVideo", name)
+            settings.sync()
+            self.bootVideoChanged.emit()
 
     def _load_journal(self):
         stats = calculate_consumption_stats(load_entries())
