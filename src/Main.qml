@@ -633,6 +633,7 @@ Window {
                         border.color: selected ? "#3ecf8e" : "#2c333c"
 
                         Image {
+                            id: thumbnail
                             anchors.top: parent.top
                             anchors.left: parent.left
                             anchors.right: parent.right
@@ -646,8 +647,8 @@ Window {
                         Text {
                             anchors.left: parent.left
                             anchors.right: parent.right
-                            anchors.top: parent.top
-                            anchors.topMargin: 112
+                            anchors.top: thumbnail.bottom
+                            anchors.topMargin: 3
                             anchors.leftMargin: 10
                             anchors.rightMargin: 10
                             color: "#ffffff"
