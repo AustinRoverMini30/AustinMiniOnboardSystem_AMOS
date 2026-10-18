@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtMultimedia
 
 Window {
     width: 800; height: 480
@@ -580,6 +581,79 @@ Window {
                 }
             }
         }
+
+                // Page : animation de démarrage
+        Item {
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.topMargin: 16
+                anchors.leftMargin: 24
+                anchors.rightMargin: 24
+                anchors.bottomMargin: 108
+                spacing: 10
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 40
+
+                    Text {
+                        Layout.fillWidth: true
+                        color: "#ffffff"
+                        font.pixelSize: 30
+                        font.weight: Font.DemiBold
+                        text: "Animation de démarrage"
+                    }
+                    DashButton {
+                        implicitWidth: 140
+                        implicitHeight: 40
+                        font.pixelSize: 16
+                        text: "Aperçu"
+                        onClicked: splash.start()
+                    }
+                }
+
+                ListView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    spacing: 8
+                    model: backend.bootVideos
+                    boundsBehavior: Flickable.StopAtBounds
+                    ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+
+                    delegate: Rectangle {
+                        readonly property bool selected: modelData.file === backend.bootVideoFile
+                        width: ListView.view.width
+                        height: 56
+                        radius: 12
+                        color: selected ? "#16301f" : "#1b2027"
+                        border.width: selected ? 2 : 1
+                        border.color: selected ? "#3ecf8e" : "#2c333c"
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 16
+                            anchors.rightMargin: 16
+
+                            Text {
+                                Layout.fillWidth: true
+                                color: "#ffffff"
+                                font.pixelSize: 20
+                                elide: Text.ElideRight
+                                text: modelData.name
+                            }
+                            Text {
+                                visible: selected
+                                color: "#3ecf8e"
+                                font.pixelSize: 24
+                                text: "✓"
+                            }
+                        }
+                        TapHandler { onTapped: backend.setBootVideo(modelData.file) }
+                    }
+                }
+            }
+        }
     }
 
     // Les points sont placés au-dessus des boutons du bas
@@ -687,5 +761,65 @@ Window {
                 }
             }
         }
+    }
+
+        // Écran de démarrage vidéo
+    Rectangle {
+        id: splash
+        anchors.fill: parent
+        color: "black"
+        z: 100
+
+        function start() {
+            if (backend.bootVideoUrl.toString() === "") { finish(); return }
+            fadeOut.stop()
+            opacity = 1
+            visible = true
+            player.source = backend.bootVideoUrl
+            player.play()
+            safety.restart()
+        }
+
+        function finish() {
+            if (!visible) return
+            safety.stop()
+            player.stop()
+            player.source = ""
+            fadeOut.start()
+        }
+
+        MediaPlayer {
+            id: player
+            videoOutput: video
+            onMediaStatusChanged: if (mediaStatus === MediaPlayer.EndOfMedia) splash.finish()
+            onErrorOccurred: function(error, errorString) {
+                console.warn("Splash vidéo :", errorString)
+                splash.finish()
+            }
+        }
+
+        VideoOutput {
+            id: video
+            anchors.fill: parent
+            fillMode: VideoOutput.PreserveAspectCrop
+        }
+
+        // Toucher l'écran passe l'animation
+        MouseArea { anchors.fill: parent; onClicked: splash.finish() }
+
+        // Filet de sécurité : si la vidéo ne démarre pas, on n'attend pas indéfiniment
+        Timer {
+            id: safety
+            interval: 8000; running: true
+            onTriggered: splash.finish()
+        }
+
+        NumberAnimation {
+            id: fadeOut
+            target: splash; property: "opacity"; to: 0; duration: 400
+            onFinished: splash.visible = false
+        }
+
+        Component.onCompleted: start()
     }
 }
