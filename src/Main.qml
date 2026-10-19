@@ -5,16 +5,19 @@ import QtMultimedia
 import Qt5Compat.GraphicalEffects
 
 Window {
+    id: root
     width: 800; height: 480
     visible: true
     color: "#0d1014"
     title: "Mini Dash"
+    // Change this single value to customize the program's primary color.
+    property color primaryColor: "#2d5fff"
 
     // Bouton réutilisable : un seul endroit pour le style
     component DashButton: Button {
         id: control
         property color fillColor: "#1b2027"
-        property color checkedColor: "#3ecf8e"
+        property color checkedColor: root.primaryColor
         property color iconTint: "#ffffff"
         property bool primary: false
 
@@ -122,7 +125,7 @@ Window {
             radius: 12
             color: "#13181e"
             border.width: field.active ? 2 : 1
-            border.color: field.active ? "#3ecf8e" : "#2c333c"
+            border.color: field.active ? root.primaryColor : "#2c333c"
             Behavior on border.color { ColorAnimation { duration: 120 } }
         }
 
@@ -130,7 +133,7 @@ Window {
             anchors.right: parent.right
             anchors.rightMargin: 12
             anchors.verticalCenter: parent.verticalCenter
-            color: field.active ? "#3ecf8e" : "#5b6571"
+            color: field.active ? root.primaryColor : "#5b6571"
             font.pixelSize: 16
             text: field.unit
         }
@@ -382,7 +385,7 @@ Window {
                                     text: "MOYENNE"
                                 }
                                 Text {
-                                    color: "#3ecf8e"
+                                    color: root.primaryColor
                                     font.pixelSize: 26
                                     font.weight: Font.DemiBold
                                     text: backend.journalRows.length < 1
@@ -408,7 +411,7 @@ Window {
                             text: "Valider"
                             font.pixelSize: 22
                             primary: true
-                            fillColor: "#3ecf8e"
+                            fillColor: root.primaryColor
                             onClicked: {
                                 if (backend.saveJournalEntry(
                                         mileageField.text, litresField.text, priceField.text)) {
@@ -479,7 +482,7 @@ Window {
                                 Text {
                                     Layout.preferredWidth: 130
                                     horizontalAlignment: Text.AlignRight
-                                    color: "#3ecf8e"
+                                    color: root.primaryColor
                                     font.pixelSize: 17
                                     font.weight: Font.Medium
                                     text: modelData.consumption.toFixed(2) + " L/100"
@@ -517,7 +520,7 @@ Window {
 
                 Text {
                     Layout.fillWidth: true
-                    color: backend.latestVersion ? "#3ecf8e" : "#ffffff"
+                    color: backend.latestVersion ? root.primaryColor : "#ffffff"
                     font.pixelSize: 22
                     font.weight: Font.Medium
                     horizontalAlignment: Text.AlignHCenter
@@ -545,7 +548,7 @@ Window {
                             width: bar.visualPosition * parent.width
                             height: parent.height
                             radius: 4
-                            color: "#3ecf8e"
+                            color: root.primaryColor
                         }
                     }
                 }
@@ -575,7 +578,7 @@ Window {
                         text: backend.updateInProgress ? "En cours..." : "Télécharger"
                         implicitWidth: 170
                         primary: true
-                        fillColor: "#3ecf8e"
+                        fillColor: root.primaryColor
                         enabled: backend.updateAvailable && !backend.updateInProgress
                         onClicked: backend.startUpdate()
                     }
@@ -629,9 +632,9 @@ Window {
                         width: bootVideoGrid.cellWidth - 12
                         height: bootVideoGrid.cellHeight - 12
                         radius: 10
-                        color: selected ? "#16301f" : "#1b2027"
+                        color: selected ? root.primaryColor: "#1b2027"
                         border.width: selected ? 2 : 1
-                        border.color: selected ? "#3ecf8e" : "#2c333c"
+                        border.color: selected ? root.primaryColor : "#2c333c"
 
                         Rectangle {
                             id: thumbnail
@@ -674,7 +677,7 @@ Window {
                             radius: 10
                             color: "transparent"
                             border.width: selected ? 2 : 1
-                            border.color: selected ? "#3ecf8e" : "#2c333c"
+                            border.color: selected ? root.primaryColor : "#2c333c"
                         }
 
                         Text {
@@ -696,7 +699,7 @@ Window {
                             anchors.rightMargin: 10
                             anchors.bottomMargin: 7
                             visible: selected
-                            color: "#3ecf8e"
+                            color: root.primaryColor
                             font.pixelSize: 20
                             text: "✓"
                         }
@@ -720,7 +723,7 @@ Window {
             implicitWidth: 8
             implicitHeight: 8
             radius: 4
-            color: index === swipe.currentIndex ? "#3ecf8e" : "#3a424d"
+            color: index === swipe.currentIndex ? root.primaryColor : "#3a424d"
             Behavior on color { ColorAnimation { duration: 150 } }
         }
     }
