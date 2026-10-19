@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtMultimedia
+import Qt5Compat.GraphicalEffects
 
 Window {
     width: 800; height: 480
@@ -632,16 +633,48 @@ Window {
                         border.width: selected ? 2 : 1
                         border.color: selected ? "#3ecf8e" : "#2c333c"
 
-                        Image {
+                        Rectangle {
                             id: thumbnail
                             anchors.top: parent.top
                             anchors.left: parent.left
                             anchors.right: parent.right
+                            anchors.topMargin: 1
+                            anchors.leftMargin: 1
+                            anchors.rightMargin: 1
                             height: width * 9 / 16
-                            source: modelData.thumbnail
-                            fillMode: Image.PreserveAspectCrop
-                            clip: true
-                            smooth: true
+                            radius: 9
+                            color: "transparent"
+
+                            Image {
+                                id: thumbnailImage
+                                anchors.fill: parent
+                                source: modelData.thumbnail
+                                fillMode: Image.PreserveAspectCrop
+                                smooth: true
+                                visible: false
+                            }
+
+                            Rectangle {
+                                id: thumbnailMask
+                                anchors.fill: parent
+                                radius: thumbnail.radius
+                                color: "white"
+                                visible: false
+                            }
+
+                            OpacityMask {
+                                anchors.fill: parent
+                                source: thumbnailImage
+                                maskSource: thumbnailMask
+                            }
+                        }
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: 10
+                            color: "transparent"
+                            border.width: selected ? 2 : 1
+                            border.color: selected ? "#3ecf8e" : "#2c333c"
                         }
 
                         Text {
