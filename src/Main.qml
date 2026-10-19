@@ -2,18 +2,22 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtMultimedia
+import Qt5Compat.GraphicalEffects
 
 Window {
+    id: root
     width: 800; height: 480
     visible: true
     color: "#0d1014"
     title: "Mini Dash"
+    // Change this single value to customize the program's primary color.
+    property color primaryColor: "#2d5fff"
 
     // Bouton réutilisable : un seul endroit pour le style
     component DashButton: Button {
         id: control
         property color fillColor: "#1b2027"
-        property color checkedColor: "#3ecf8e"
+        property color checkedColor: root.primaryColor
         property color iconTint: "#ffffff"
         property bool primary: false
 
@@ -121,7 +125,7 @@ Window {
             radius: 12
             color: "#13181e"
             border.width: field.active ? 2 : 1
-            border.color: field.active ? "#3ecf8e" : "#2c333c"
+            border.color: field.active ? root.primaryColor : "#2c333c"
             Behavior on border.color { ColorAnimation { duration: 120 } }
         }
 
@@ -129,7 +133,7 @@ Window {
             anchors.right: parent.right
             anchors.rightMargin: 12
             anchors.verticalCenter: parent.verticalCenter
-            color: field.active ? "#3ecf8e" : "#5b6571"
+            color: field.active ? root.primaryColor : "#5b6571"
             font.pixelSize: 16
             text: field.unit
         }
@@ -381,7 +385,7 @@ Window {
                                     text: "MOYENNE"
                                 }
                                 Text {
-                                    color: "#3ecf8e"
+                                    color: root.primaryColor
                                     font.pixelSize: 26
                                     font.weight: Font.DemiBold
                                     text: backend.journalRows.length < 1
@@ -407,7 +411,7 @@ Window {
                             text: "Valider"
                             font.pixelSize: 22
                             primary: true
-                            fillColor: "#3ecf8e"
+                            fillColor: root.primaryColor
                             onClicked: {
                                 if (backend.saveJournalEntry(
                                         mileageField.text, litresField.text, priceField.text)) {
@@ -478,7 +482,7 @@ Window {
                                 Text {
                                     Layout.preferredWidth: 130
                                     horizontalAlignment: Text.AlignRight
-                                    color: "#3ecf8e"
+                                    color: root.primaryColor
                                     font.pixelSize: 17
                                     font.weight: Font.Medium
                                     text: modelData.consumption.toFixed(2) + " L/100"
@@ -516,7 +520,7 @@ Window {
 
                 Text {
                     Layout.fillWidth: true
-                    color: backend.latestVersion ? "#3ecf8e" : "#ffffff"
+                    color: backend.latestVersion ? root.primaryColor : "#ffffff"
                     font.pixelSize: 22
                     font.weight: Font.Medium
                     horizontalAlignment: Text.AlignHCenter
@@ -544,7 +548,7 @@ Window {
                             width: bar.visualPosition * parent.width
                             height: parent.height
                             radius: 4
-                            color: "#3ecf8e"
+                            color: root.primaryColor
                         }
                     }
                 }
@@ -574,7 +578,7 @@ Window {
                         text: backend.updateInProgress ? "En cours..." : "Télécharger"
                         implicitWidth: 170
                         primary: true
-                        fillColor: "#3ecf8e"
+                        fillColor: root.primaryColor
                         enabled: backend.updateAvailable && !backend.updateInProgress
                         onClicked: backend.startUpdate()
                     }
@@ -612,43 +616,94 @@ Window {
                     }
                 }
 
-                ListView {
+                GridView {
+                    id: bootVideoGrid
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     clip: true
-                    spacing: 8
+                    cellWidth: width / 3
+                    cellHeight: 174
                     model: backend.bootVideos
                     boundsBehavior: Flickable.StopAtBounds
                     ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
                     delegate: Rectangle {
                         readonly property bool selected: modelData.file === backend.bootVideoFile
-                        width: ListView.view.width
-                        height: 56
-                        radius: 12
-                        color: selected ? "#16301f" : "#1b2027"
+                        width: bootVideoGrid.cellWidth - 12
+                        height: bootVideoGrid.cellHeight - 12
+                        radius: 10
+                        color: selected ? root.primaryColor: "#1b2027"
                         border.width: selected ? 2 : 1
-                        border.color: selected ? "#3ecf8e" : "#2c333c"
+                        border.color: selected ? root.primaryColor : "#2c333c"
 
-                        RowLayout {
-                            anchors.fill: parent
-                            anchors.leftMargin: 16
-                            anchors.rightMargin: 16
+                        Rectangle {
+                            id: thumbnail
+                            anchors.top: parent.top
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.topMargin: 1
+                            anchors.leftMargin: 1
+                            anchors.rightMargin: 1
+                            height: width * 9 / 16
+                            radius: 9
+                            color: "transparent"
 
-                            Text {
-                                Layout.fillWidth: true
-                                color: "#ffffff"
-                                font.pixelSize: 20
-                                elide: Text.ElideRight
-                                text: modelData.name
+                            Image {
+                                id: thumbnailImage
+                                anchors.fill: parent
+                                source: modelData.thumbnail
+                                fillMode: Image.PreserveAspectCrop
+                                smooth: true
+                                visible: false
                             }
-                            Text {
-                                visible: selected
-                                color: "#3ecf8e"
-                                font.pixelSize: 24
-                                text: "✓"
+
+                            Rectangle {
+                                id: thumbnailMask
+                                anchors.fill: parent
+                                radius: thumbnail.radius
+                                color: "white"
+                                visible: false
+                            }
+
+                            OpacityMask {
+                                anchors.fill: parent
+                                source: thumbnailImage
+                                maskSource: thumbnailMask
                             }
                         }
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: 10
+                            color: "transparent"
+                            border.width: selected ? 2 : 1
+                            border.color: selected ? root.primaryColor : "#2c333c"
+                        }
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.top: thumbnail.bottom
+                            anchors.topMargin: 3
+                            anchors.leftMargin: 10
+                            anchors.rightMargin: 10
+                            color: "#ffffff"
+                            font.pixelSize: 17
+                            elide: Text.ElideRight
+                            text: modelData.name
+                        }
+
+                        Text {
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            anchors.rightMargin: 10
+                            anchors.bottomMargin: 7
+                            visible: selected
+                            color: root.primaryColor
+                            font.pixelSize: 20
+                            text: "✓"
+                        }
+
                         TapHandler { onTapped: backend.setBootVideo(modelData.file) }
                     }
                 }
@@ -668,7 +723,7 @@ Window {
             implicitWidth: 8
             implicitHeight: 8
             radius: 4
-            color: index === swipe.currentIndex ? "#3ecf8e" : "#3a424d"
+            color: index === swipe.currentIndex ? root.primaryColor : "#3a424d"
             Behavior on color { ColorAnimation { duration: 150 } }
         }
     }
@@ -707,6 +762,13 @@ Window {
             id: onOffButton
             icon.source: "../assets/on-off-button.png"
             onClicked: powerDialog.open()
+        }
+
+        DashButton {
+            id: kioskButton
+            text: "Kiosque"
+            enabled: !kioskOverlay.visible
+            onClicked: kioskOverlay.start()
         }
     }
 
@@ -763,6 +825,74 @@ Window {
         }
     }
 
+    Rectangle {
+        id: kioskOverlay
+        anchors.fill: parent
+        color: "black"
+        visible: false
+        z: 90
+
+        function start() {
+            if (backend.bootVideoUrl.toString() === "") {
+                return
+            }
+            kioskPlayer.stop()
+            kioskPlayer.source = backend.bootVideoUrl
+            kioskFadeOut.stop()
+            opacity = 1
+            visible = true
+            kioskPlayer.play()
+        }
+
+        function finish() {
+            if (!visible) {
+                return
+            }
+            kioskFadeOut.stop()
+            kioskPlayer.stop()
+            kioskPlayer.source = ""
+            opacity = 1
+            visible = false
+        }
+
+        MediaPlayer {
+            id: kioskPlayer
+            videoOutput: kioskVideo
+            onPositionChanged: {
+                if (duration > 0 && position >= duration - 150) {
+                    position = Math.max(0, duration - 100)
+                    pause()
+                }
+            }
+            onMediaStatusChanged: {
+                if (mediaStatus === MediaPlayer.EndOfMedia) {
+                    position = Math.max(0, duration - 100)
+                    pause()
+                }
+            }
+        }
+
+        VideoOutput {
+            id: kioskVideo
+            anchors.fill: parent
+            fillMode: VideoOutput.PreserveAspectCrop
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: kioskFadeOut.start()
+        }
+
+        NumberAnimation {
+            id: kioskFadeOut
+            target: kioskOverlay
+            property: "opacity"
+            to: 0
+            duration: 500
+            onFinished: kioskOverlay.finish()
+        }
+    }
+
         // Écran de démarrage vidéo
     Rectangle {
         id: splash
@@ -783,8 +913,7 @@ Window {
         function finish() {
             if (!visible) return
             safety.stop()
-            player.stop()
-            player.source = ""
+            fadeOut.stop()
             fadeOut.start()
         }
 
@@ -816,8 +945,15 @@ Window {
 
         NumberAnimation {
             id: fadeOut
-            target: splash; property: "opacity"; to: 0; duration: 400
-            onFinished: splash.visible = false
+            target: splash
+            property: "opacity"
+            to: 0
+            duration: 400
+            onFinished: {
+                player.stop()
+                player.source = ""
+                splash.visible = false
+            }
         }
 
         Component.onCompleted: start()

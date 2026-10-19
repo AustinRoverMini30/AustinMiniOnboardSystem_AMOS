@@ -44,11 +44,11 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Create ZIP (sans .venv)
+      - name: Create ZIP (sans .venv, repo_assets et README)
         if: steps.exists.outputs.exists != 'true'
         env:
           TAG: ${{ steps.version.outputs.tag }}
-        run: zip -r "AustinMiniOnboardSystem_AMOS_${TAG}.zip" ./ -x "*.venv/*" -x "*venv/*" -x "*__pycache__/*" -x "*.git*" -x "*.idea*"
+        run: zip -r "AustinMiniOnboardSystem_AMOS_${TAG}.zip" ./ -x "*.venv/*" -x "*venv/*" -x "*__pycache__/*" -x "*.git*" -x "*.idea*" -x "./repo_assets/*" -x "./README*"
 
       - name: Create Release
         if: steps.exists.outputs.exists != 'true'
