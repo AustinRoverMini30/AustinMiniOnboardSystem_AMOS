@@ -1,8 +1,8 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Effects
 import QtMultimedia
-import Qt5Compat.GraphicalEffects
 
 Window {
     id: root
@@ -10,10 +10,15 @@ Window {
     visible: true
     color: "#0d1014"
     title: "Mini Dash"
+
     // Change this single value to customize the program's primary color.
     property color primaryColor: "#2d5fff"
 
-    // Bouton réutilisable : un seul endroit pour le style
+    // ─────────────────────────────────────────────
+    //  Composants réutilisables
+    // ─────────────────────────────────────────────
+
+    // Bouton : un seul endroit pour le style
     component DashButton: Button {
         id: control
         property color fillColor: "#1b2027"
@@ -47,12 +52,16 @@ Window {
         }
     }
 
+    // Cadran avec aiguille
     component GaugeView: Item {
         id: gaugeView
         property url gaugeSource
         property string title: ""
+        property string unit: "%"
         property real value: 0
         property real maximum: 100
+        property real startAngle: -50     // angle de l'aiguille à 0
+        property real sweep: 250          // débattement total en degrés
         property real gaugeSize: Math.min(width, height - 44)
 
         function clampedValue() {
@@ -60,7 +69,7 @@ Window {
         }
 
         function needleRotation() {
-            return -(50 - (clampedValue() * 25 / 10))
+            return startAngle + clampedValue() / maximum * sweep
         }
 
         Image {
@@ -100,11 +109,11 @@ Window {
             anchors.right: parent.right
             color: "#8a93a0"
             font.pixelSize: 14
-            text: gaugeView.value.toFixed(0) + (gaugeView.title === "TEMPÉRATURE" ? " °C" : " %")
+            text: gaugeView.value.toFixed(0) + " " + gaugeView.unit
         }
     }
 
-        // Champ de saisie lecture seule, piloté par le pavé numérique
+    // Champ de saisie lecture seule, piloté par le pavé numérique
     component JournalField: TextField {
         id: field
         property bool active: false
@@ -141,7 +150,95 @@ Window {
         TapHandler { onTapped: field.selected() }
     }
 
-    // Fond en léger dégradé
+    // Overlay vidéo plein écran (écran de démarrage et mode kiosque)
+    component VideoOverlay: Rectangle {
+        id: overlay
+        property bool holdLastFrame: false   // reste sur la dernière image
+        property int timeout: 0              // filet de sécurité en ms (0 = aucun)
+        property int fadeDuration: 400
+
+        color: "black"
+        visible: false
+
+        function start() {
+            if (backend.bootVideoUrl.toString() === "") {
+                visible = false
+                return
+            }
+            fade.stop()
+            opacity = 1
+            visible = true
+            player.source = backend.bootVideoUrl
+            player.play()
+            if (timeout > 0) safety.restart()
+        }
+
+        function finish() {
+            if (!visible) return
+            safety.stop()
+            fade.restart()
+        }
+
+        MediaPlayer {
+            id: player
+            videoOutput: video
+            audioOutput: AudioOutput {}      // Qt 6 : pas de son sans AudioOutput
+
+            function freeze() {
+                position = Math.max(0, duration - 100)
+                pause()
+            }
+
+            onPositionChanged: {
+                if (overlay.holdLastFrame && duration > 0 && position >= duration - 150)
+                    freeze()
+            }
+            onMediaStatusChanged: {
+                if (mediaStatus === MediaPlayer.EndOfMedia) {
+                    if (overlay.holdLastFrame) freeze()
+                    else overlay.finish()
+                }
+            }
+            onErrorOccurred: (error, errorString) => {
+                console.warn("Vidéo :", errorString)
+                overlay.finish()
+            }
+        }
+
+        VideoOutput {
+            id: video
+            anchors.fill: parent
+            fillMode: VideoOutput.PreserveAspectCrop
+        }
+
+        // Toucher l'écran ferme l'overlay
+        MouseArea { anchors.fill: parent; onClicked: overlay.finish() }
+
+        // Filet de sécurité : si la vidéo ne démarre pas, on n'attend pas indéfiniment
+        Timer {
+            id: safety
+            interval: overlay.timeout
+            onTriggered: overlay.finish()
+        }
+
+        NumberAnimation {
+            id: fade
+            target: overlay
+            property: "opacity"
+            to: 0
+            duration: overlay.fadeDuration
+            onFinished: {
+                player.stop()
+                player.source = ""
+                overlay.visible = false
+                overlay.opacity = 1
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────
+    //  Fond en léger dégradé
+    // ─────────────────────────────────────────────
     Rectangle {
         anchors.fill: parent
         gradient: Gradient {
@@ -174,7 +271,6 @@ Window {
                         onTriggered: clock.text = Qt.formatTime(new Date(), "hh:mm")
                     }
                 }
-
             }
         }
 
@@ -206,6 +302,7 @@ Window {
                         Layout.fillHeight: true
                         gaugeSource: "../assets/Compteur.png"
                         title: "TEMPÉRATURE"
+                        unit: "°C"
                         value: backend.temperature
                         maximum: 100
                     }
@@ -348,6 +445,8 @@ Window {
                             model: ["7", "8", "9", "4", "5", "6", "1", "2", "3", ".", "0", "<"]
 
                             delegate: DashButton {
+                                required property string modelData
+
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
                                 Layout.minimumHeight: 40
@@ -457,6 +556,8 @@ Window {
                         boundsBehavior: Flickable.StopAtBounds
 
                         delegate: Rectangle {
+                            required property var modelData
+
                             width: journalList.width
                             height: 46
                             radius: 10
@@ -494,7 +595,7 @@ Window {
             }
         }
 
-        // Page 2 : mise à jour
+        // Page 4 : mise à jour
         Item {
             ColumnLayout {
                 anchors.centerIn: parent
@@ -586,7 +687,7 @@ Window {
             }
         }
 
-                // Page : animation de démarrage
+        // Page 5 : animation de démarrage
         Item {
             ColumnLayout {
                 anchors.fill: parent
@@ -628,56 +729,63 @@ Window {
                     ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
                     delegate: Rectangle {
+                        id: videoCard
+                        required property var modelData
                         readonly property bool selected: modelData.file === backend.bootVideoFile
+
                         width: bootVideoGrid.cellWidth - 12
                         height: bootVideoGrid.cellHeight - 12
                         radius: 10
-                        color: selected ? root.primaryColor: "#1b2027"
+                        color: selected ? root.primaryColor : "#1b2027"
                         border.width: selected ? 2 : 1
                         border.color: selected ? root.primaryColor : "#2c333c"
 
-                        Rectangle {
+                        // Miniature aux coins arrondis (MultiEffect, Qt 6.5+)
+                        Item {
                             id: thumbnail
                             anchors.top: parent.top
                             anchors.left: parent.left
                             anchors.right: parent.right
-                            anchors.topMargin: 1
-                            anchors.leftMargin: 1
-                            anchors.rightMargin: 1
+                            anchors.margins: 1
                             height: width * 9 / 16
-                            radius: 9
-                            color: "transparent"
 
                             Image {
                                 id: thumbnailImage
                                 anchors.fill: parent
-                                source: modelData.thumbnail
+                                source: videoCard.modelData.thumbnail
                                 fillMode: Image.PreserveAspectCrop
                                 smooth: true
                                 visible: false
                             }
 
-                            Rectangle {
+                            Item {
                                 id: thumbnailMask
                                 anchors.fill: parent
-                                radius: thumbnail.radius
-                                color: "white"
+                                layer.enabled: true
                                 visible: false
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 9
+                                    color: "white"
+                                }
                             }
 
-                            OpacityMask {
+                            MultiEffect {
                                 anchors.fill: parent
                                 source: thumbnailImage
+                                maskEnabled: true
                                 maskSource: thumbnailMask
                             }
                         }
 
+                        // Contour au-dessus de la miniature
                         Rectangle {
                             anchors.fill: parent
                             radius: 10
                             color: "transparent"
-                            border.width: selected ? 2 : 1
-                            border.color: selected ? root.primaryColor : "#2c333c"
+                            border.width: videoCard.selected ? 2 : 1
+                            border.color: videoCard.selected ? root.primaryColor : "#2c333c"
                         }
 
                         Text {
@@ -690,7 +798,7 @@ Window {
                             color: "#ffffff"
                             font.pixelSize: 17
                             elide: Text.ElideRight
-                            text: modelData.name
+                            text: videoCard.modelData.name
                         }
 
                         Text {
@@ -698,13 +806,13 @@ Window {
                             anchors.bottom: parent.bottom
                             anchors.rightMargin: 10
                             anchors.bottomMargin: 7
-                            visible: selected
+                            visible: videoCard.selected
                             color: root.primaryColor
                             font.pixelSize: 20
                             text: "✓"
                         }
 
-                        TapHandler { onTapped: backend.setBootVideo(modelData.file) }
+                        TapHandler { onTapped: backend.setBootVideo(videoCard.modelData.file) }
                     }
                 }
             }
@@ -720,6 +828,8 @@ Window {
         currentIndex: swipe.currentIndex
 
         delegate: Rectangle {
+            required property int index
+
             implicitWidth: 8
             implicitHeight: 8
             radius: 4
@@ -728,6 +838,7 @@ Window {
         }
     }
 
+    // Boutons du bas
     Row {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
@@ -772,8 +883,10 @@ Window {
         }
     }
 
+    // Boîte de dialogue d'alimentation
     Dialog {
         id: powerDialog
+        parent: Overlay.overlay
         title: "Alimentation"
         modal: true
         anchors.centerIn: parent
@@ -825,137 +938,21 @@ Window {
         }
     }
 
-    Rectangle {
+    // Mode kiosque : vidéo en boucle figée sur la dernière image
+    VideoOverlay {
         id: kioskOverlay
         anchors.fill: parent
-        color: "black"
-        visible: false
         z: 90
-
-        function start() {
-            if (backend.bootVideoUrl.toString() === "") {
-                return
-            }
-            kioskPlayer.stop()
-            kioskPlayer.source = backend.bootVideoUrl
-            kioskFadeOut.stop()
-            opacity = 1
-            visible = true
-            kioskPlayer.play()
-        }
-
-        function finish() {
-            if (!visible) {
-                return
-            }
-            kioskFadeOut.stop()
-            kioskPlayer.stop()
-            kioskPlayer.source = ""
-            opacity = 1
-            visible = false
-        }
-
-        MediaPlayer {
-            id: kioskPlayer
-            videoOutput: kioskVideo
-            onPositionChanged: {
-                if (duration > 0 && position >= duration - 150) {
-                    position = Math.max(0, duration - 100)
-                    pause()
-                }
-            }
-            onMediaStatusChanged: {
-                if (mediaStatus === MediaPlayer.EndOfMedia) {
-                    position = Math.max(0, duration - 100)
-                    pause()
-                }
-            }
-        }
-
-        VideoOutput {
-            id: kioskVideo
-            anchors.fill: parent
-            fillMode: VideoOutput.PreserveAspectCrop
-        }
-
-        MouseArea {
-            anchors.fill: parent
-            onClicked: kioskFadeOut.start()
-        }
-
-        NumberAnimation {
-            id: kioskFadeOut
-            target: kioskOverlay
-            property: "opacity"
-            to: 0
-            duration: 500
-            onFinished: kioskOverlay.finish()
-        }
+        holdLastFrame: true
+        fadeDuration: 500
     }
 
-        // Écran de démarrage vidéo
-    Rectangle {
+    // Écran de démarrage vidéo
+    VideoOverlay {
         id: splash
         anchors.fill: parent
-        color: "black"
         z: 100
-
-        function start() {
-            if (backend.bootVideoUrl.toString() === "") { finish(); return }
-            fadeOut.stop()
-            opacity = 1
-            visible = true
-            player.source = backend.bootVideoUrl
-            player.play()
-            safety.restart()
-        }
-
-        function finish() {
-            if (!visible) return
-            safety.stop()
-            fadeOut.stop()
-            fadeOut.start()
-        }
-
-        MediaPlayer {
-            id: player
-            videoOutput: video
-            onMediaStatusChanged: if (mediaStatus === MediaPlayer.EndOfMedia) splash.finish()
-            onErrorOccurred: function(error, errorString) {
-                console.warn("Splash vidéo :", errorString)
-                splash.finish()
-            }
-        }
-
-        VideoOutput {
-            id: video
-            anchors.fill: parent
-            fillMode: VideoOutput.PreserveAspectCrop
-        }
-
-        // Toucher l'écran passe l'animation
-        MouseArea { anchors.fill: parent; onClicked: splash.finish() }
-
-        // Filet de sécurité : si la vidéo ne démarre pas, on n'attend pas indéfiniment
-        Timer {
-            id: safety
-            interval: 8000; running: true
-            onTriggered: splash.finish()
-        }
-
-        NumberAnimation {
-            id: fadeOut
-            target: splash
-            property: "opacity"
-            to: 0
-            duration: 400
-            onFinished: {
-                player.stop()
-                player.source = ""
-                splash.visible = false
-            }
-        }
-
+        timeout: 8000
         Component.onCompleted: start()
     }
 }
