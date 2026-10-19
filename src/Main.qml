@@ -763,6 +763,13 @@ Window {
             icon.source: "../assets/on-off-button.png"
             onClicked: powerDialog.open()
         }
+
+        DashButton {
+            id: kioskButton
+            text: "Kiosque"
+            enabled: !kioskOverlay.visible
+            onClicked: kioskOverlay.start()
+        }
     }
 
     Dialog {
@@ -818,6 +825,74 @@ Window {
         }
     }
 
+    Rectangle {
+        id: kioskOverlay
+        anchors.fill: parent
+        color: "black"
+        visible: false
+        z: 90
+
+        function start() {
+            if (backend.bootVideoUrl.toString() === "") {
+                return
+            }
+            kioskPlayer.stop()
+            kioskPlayer.source = backend.bootVideoUrl
+            kioskFadeOut.stop()
+            opacity = 1
+            visible = true
+            kioskPlayer.play()
+        }
+
+        function finish() {
+            if (!visible) {
+                return
+            }
+            kioskFadeOut.stop()
+            kioskPlayer.stop()
+            kioskPlayer.source = ""
+            opacity = 1
+            visible = false
+        }
+
+        MediaPlayer {
+            id: kioskPlayer
+            videoOutput: kioskVideo
+            onPositionChanged: {
+                if (duration > 0 && position >= duration - 150) {
+                    position = Math.max(0, duration - 100)
+                    pause()
+                }
+            }
+            onMediaStatusChanged: {
+                if (mediaStatus === MediaPlayer.EndOfMedia) {
+                    position = Math.max(0, duration - 100)
+                    pause()
+                }
+            }
+        }
+
+        VideoOutput {
+            id: kioskVideo
+            anchors.fill: parent
+            fillMode: VideoOutput.PreserveAspectCrop
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: kioskFadeOut.start()
+        }
+
+        NumberAnimation {
+            id: kioskFadeOut
+            target: kioskOverlay
+            property: "opacity"
+            to: 0
+            duration: 500
+            onFinished: kioskOverlay.finish()
+        }
+    }
+
         // Écran de démarrage vidéo
     Rectangle {
         id: splash
@@ -838,8 +913,7 @@ Window {
         function finish() {
             if (!visible) return
             safety.stop()
-            player.stop()
-            player.source = ""
+            fadeOut.stop()
             fadeOut.start()
         }
 
@@ -871,8 +945,15 @@ Window {
 
         NumberAnimation {
             id: fadeOut
-            target: splash; property: "opacity"; to: 0; duration: 400
-            onFinished: splash.visible = false
+            target: splash
+            property: "opacity"
+            to: 0
+            duration: 400
+            onFinished: {
+                player.stop()
+                player.source = ""
+                splash.visible = false
+            }
         }
 
         Component.onCompleted: start()
