@@ -222,7 +222,7 @@ if [[ $INSTALL_DEPS -eq 1 ]]; then
         # Modules QML (import QtQuick, Controls, Layouts...) : paquets Debian séparés de PySide6
         for pkg in qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-layouts \
                    qml6-module-qtquick-window qml6-module-qtquick-templates \
-                   qml6-module-qtqml-workerscript qml6-module-qtmultimedia; do
+                   qml6-module-qtqml-workerscript qml6-module-qtmultimedia qml6-module-qtquick-effects; do
             apt-get install -y "$pkg" 2>/dev/null || warn "Paquet $pkg indisponible (ignoré)"
         done
     else
