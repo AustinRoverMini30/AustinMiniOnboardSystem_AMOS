@@ -817,6 +817,51 @@ Window {
                 }
             }
         }
+
+        // Page 6 : paramètres
+        Item {
+            ColumnLayout {
+                anchors.centerIn: parent
+                width: parent.width * 0.8
+                spacing: 24
+
+                Text {
+                    Layout.alignment: Qt.AlignHCenter
+                    color: "#ffffff"
+                    font.pixelSize: 40
+                    font.weight: Font.DemiBold
+                    text: "Paramètres"
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 72
+                    radius: 14
+                    color: "#13181e"
+                    border.width: 1
+                    border.color: "#2c333c"
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 20
+                        anchors.rightMargin: 16
+                        spacing: 16
+
+                        Text {
+                            Layout.fillWidth: true
+                            color: "#ffffff"
+                            font.pixelSize: 20
+                            text: "Kiosque au démarrage"
+                        }
+
+                        Switch {
+                            checked: backend.kioskAtStartup
+                            onToggled: backend.setKioskAtStartup(checked)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // Les points sont placés au-dessus des boutons du bas
@@ -951,7 +996,7 @@ Window {
     VideoOverlay {
         id: kioskOverlay
         anchors.fill: parent
-        z: 90
+        z: 100
         holdLastFrame: true
         fadeDuration: 500
     }
@@ -960,8 +1005,13 @@ Window {
     VideoOverlay {
         id: splash
         anchors.fill: parent
-        z: 100
+        z: 90
         timeout: 8000
-        Component.onCompleted: start()
+        Component.onCompleted: {
+            if (backend.kioskAtStartup)
+                kioskOverlay.start()
+            else
+                start()
+        }
     }
 }

@@ -55,6 +55,7 @@ class Backend(QObject):
     updateStatusResult = Signal(str)
     journalChanged = Signal()
     bootVideoChanged = Signal()
+    kioskAtStartupChanged = Signal()
 
     def __init__(self):
         super().__init__()
@@ -216,6 +217,19 @@ class Backend(QObject):
     def bootVideoUrl(self):
         f = self._current_boot_file()
         return QUrl.fromLocalFile(str(f)) if f else QUrl()
+
+    @Property(bool, notify=kioskAtStartupChanged)
+    def kioskAtStartup(self):
+        return settings.value("kioskAtStartup", False, type=bool)
+
+    @Slot(bool)
+    def setKioskAtStartup(self, enabled):
+        enabled = bool(enabled)
+        if enabled == self.kioskAtStartup:
+            return
+        settings.setValue("kioskAtStartup", enabled)
+        settings.sync()
+        self.kioskAtStartupChanged.emit()
 
     @Slot(str)
     def setBootVideo(self, file):
