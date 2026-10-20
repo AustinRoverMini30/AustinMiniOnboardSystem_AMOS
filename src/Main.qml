@@ -487,7 +487,7 @@ Window {
                                     color: root.primaryColor
                                     font.pixelSize: 26
                                     font.weight: Font.DemiBold
-                                    text: backend.journalRows.length < 1
+                                    text: !backend.journalAverageReady
                                           ? "--"
                                           : backend.journalAverage.toFixed(2) + " L/100"
                                 }
@@ -919,7 +919,7 @@ Window {
                 color: "#8a93a0"
                 font.pixelSize: 16
                 horizontalAlignment: Text.AlignHCenter
-                text: "Éteindre le système ?"
+                text: "Que souhaitez-vous faire ?"
             }
 
             DashButton {
@@ -933,6 +933,15 @@ Window {
                 onClicked: {
                     powerDialog.close()
                     backend.shutdown()
+                }
+            }
+
+            DashButton {
+                Layout.fillWidth: true
+                text: "Redémarrer"
+                onClicked: {
+                    powerDialog.close()
+                    backend.restart()
                 }
             }
         }

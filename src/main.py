@@ -70,6 +70,7 @@ class Backend(QObject):
         self._update_status = "En attente..."
         self._journal_rows = []
         self._journal_average = 0.0
+        self._journal_average_ready = False
         self._journal_last = 0.0
         self._journal_total_km = 0.0
         self._journal_total_litres = 0.0
@@ -156,6 +157,10 @@ class Backend(QObject):
     def journalAverage(self):
         return self._journal_average
 
+    @Property(bool, notify=journalChanged)
+    def journalAverageReady(self):
+        return self._journal_average_ready
+
     @Property(float, notify=journalChanged)
     def journalLast(self):
         return self._journal_last
@@ -225,6 +230,7 @@ class Backend(QObject):
         if not stats:
             self._journal_rows = []
             self._journal_average = 0.0
+            self._journal_average_ready = False
             self._journal_last = 0.0
             self._journal_total_km = 0.0
             self._journal_total_litres = 0.0
@@ -241,6 +247,7 @@ class Backend(QObject):
                 for row in stats["consumptions"]
             ]
             self._journal_average = stats["avg_consumption"]
+            self._journal_average_ready = stats["average_ready"]
             self._journal_last = stats["last_consumption"]
             self._journal_total_km = stats["total_km"]
             self._journal_total_litres = stats["total_litres"]
