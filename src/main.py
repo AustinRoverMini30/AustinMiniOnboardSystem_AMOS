@@ -84,9 +84,7 @@ class Backend(QObject):
 
         self.updateCheckResult.connect(self._handle_update_check)
         self.updateDownloadResult.connect(self._handle_update_result)
-        self.updateProgressResult.connect(
-            lambda progress: self._set_update_state(update_progress=progress)
-        )
+        self.updateProgressResult.connect(self._handle_update_progress)
         self.updateStatusResult.connect(
             lambda status: self._set_update_state(update_status=status)
         )
@@ -307,6 +305,13 @@ class Backend(QObject):
             setattr(self, f"_{name}", value)
         self.updateStateChanged.emit()
 
+    @Slot(float)
+    def _handle_update_progress(self, progress):
+        progress = max(0.0, min(1.0, float(progress)))
+        if progress < self._update_progress:
+            return
+        self._set_update_state(update_progress=progress)
+
     @Slot()
     def checkForUpdates(self):
         if self._update_in_progress:
@@ -344,7 +349,6 @@ class Backend(QObject):
         )
 
         def progress(downloaded, total):
-            print(f"Téléchargé {downloaded} sur {total} octets")
             if total:
                 self.updateProgressResult.emit(downloaded / total)
 
