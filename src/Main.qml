@@ -92,6 +92,12 @@ Window {
             smooth: true
             transformOrigin: Item.Center
             rotation: gaugeView.needleRotation()
+            Behavior on rotation {
+                NumberAnimation {
+                    duration: 250
+                    easing.type: Easing.OutQuad
+                }
+            }
         }
 
         Text {
@@ -166,6 +172,12 @@ Window {
             smooth: true
             transformOrigin: Item.Center
             rotation: voltageGauge.needleRotation()
+            Behavior on rotation {
+                NumberAnimation {
+                    duration: 250
+                    easing.type: Easing.OutQuad
+                }
+            }
         }
 
         Image {
