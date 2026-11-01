@@ -92,6 +92,12 @@ Window {
             smooth: true
             transformOrigin: Item.Center
             rotation: gaugeView.needleRotation()
+            Behavior on rotation {
+                NumberAnimation {
+                    duration: 250
+                    easing.type: Easing.OutQuad
+                }
+            }
         }
 
         Text {
@@ -166,6 +172,12 @@ Window {
             smooth: true
             transformOrigin: Item.Center
             rotation: voltageGauge.needleRotation()
+            Behavior on rotation {
+                NumberAnimation {
+                    duration: 250
+                    easing.type: Easing.OutQuad
+                }
+            }
         }
 
         Image {
@@ -718,26 +730,22 @@ Window {
                         : backend.updateStatus
                 }
 
-                ProgressBar {
-                    id: bar
+                Item {
                     Layout.fillWidth: true
-                    from: 0
-                    to: 1
-                    value: backend.updateProgress
+                    Layout.preferredHeight: 8
                     visible: backend.updateInProgress
 
-                    background: Rectangle {
-                        implicitHeight: 8
+                    Rectangle {
+                        anchors.fill: parent
                         radius: 4
                         color: "#252a31"
                     }
-                    contentItem: Item {
-                        Rectangle {
-                            width: bar.visualPosition * parent.width
-                            height: parent.height
-                            radius: 4
-                            color: root.primaryColor
-                        }
+
+                    Rectangle {
+                        width: parent.width * Math.max(0, Math.min(1, backend.updateProgress))
+                        height: parent.height
+                        radius: 4
+                        color: root.primaryColor
                     }
                 }
 
