@@ -344,6 +344,7 @@ class Backend(QObject):
         )
 
         def progress(downloaded, total):
+            print(f"Téléchargé {downloaded} sur {total} octets")
             if total:
                 self.updateProgressResult.emit(downloaded / total)
 
