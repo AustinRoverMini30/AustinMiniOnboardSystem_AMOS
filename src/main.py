@@ -135,10 +135,10 @@ class Backend(QObject):
         if (pc_dev):
             return 12.0
         try:
-            voltage = bus.read_word_data(0x48, 0x02)
+            voltage = bus.read_word_data(0x40, 0x02)
             voltage = ((voltage & 0xFF) << 8) | (voltage >> 8)
-            voltage = voltage * 0.00322
-            return round(voltage, 2)*4
+            voltage = voltage * 0.00125
+            return round(voltage, 2)
         except Exception:
             return 0.0
 
