@@ -4,6 +4,8 @@ import sys
 import threading
 from pathlib import Path
 
+from smbus2 import SMBus
+
 import psutil
 from PySide6.QtCore import (
     QObject,
@@ -16,9 +18,8 @@ from PySide6.QtCore import (
     QUrl,
     Qt
 )
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtGui import (QGuiApplication,QCursor)
 from PySide6.QtQml import QQmlApplicationEngine
-from PySide6.QtGui import QCursor
 
 from gpiozero import OutputDevice
 from gpiozero.exc import BadPinFactory
@@ -34,20 +35,23 @@ from KilometerManager import calculate_consumption_stats, load_entries, save_ent
 pc_dev = False
 FAN_PIN = 18
 
-BOOT_DIR = Path(__file__).resolve().parent.parent / "assets" / "boot"   # à adapter à ton arborescence
+BOOT_DIR = Path(__file__).resolve().parent.parent / "assets" / "boot"
 THUMBNAIL_DIR = Path(__file__).resolve().parent.parent / "assets" / "boot" / "thumbnails"
-settings = QSettings("AMOS", "MiniDash")
+settings = QSettings("AMOS", "AustinMiniOnboardSystem_AMOS")
 
 try:
     fan = OutputDevice(FAN_PIN, active_high=False, initial_value=False)
+    bus = SMBus(1)
 except BadPinFactory:
     fan = None
     pc_dev = True
+    bus = None
 
 class Backend(QObject):
     cpuTempChanged = Signal()
     speedChanged = Signal()
     gaugesChanged = Signal()
+    voltageChanged = Signal()
     updateStateChanged = Signal()
     updateCheckResult = Signal(str, str)
     updateDownloadResult = Signal(bool, str)
@@ -95,7 +99,7 @@ class Backend(QObject):
         try:
             return int(Path("/sys/class/thermal/thermal_zone0/temp").read_text()) / 1000
         except OSError:
-            return 42.0
+            return 0
 
     def _update(self):
         self._tick += 1
@@ -105,7 +109,7 @@ class Backend(QObject):
         self.cpuTempChanged.emit()
         self.speedChanged.emit()
         self.gaugesChanged.emit()
-
+        self.voltageChanged.emit()
     @Property(float, notify=cpuTempChanged)
     def cpuTemp(self):
         return self._temp
@@ -125,6 +129,18 @@ class Backend(QObject):
     @Property(float, notify=gaugesChanged)
     def cpuUsage(self):
         return psutil.cpu_percent(interval=None)
+
+    @Property(float, notify=voltageChanged)
+    def voltage(self):
+        if (pc_dev):
+            return 12.0
+        try:
+            voltage = bus.read_word_data(0x48, 0x02)
+            voltage = ((voltage & 0xFF) << 8) | (voltage >> 8)
+            voltage = voltage * 0.00322
+            return round(voltage, 2)*4
+        except Exception:
+            return 0.0
 
     @Property(str, notify=updateStateChanged)
     def currentVersion(self):

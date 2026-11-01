@@ -9,7 +9,7 @@ Window {
     width: 800; height: 480
     visible: true
     color: "#0d1014"
-    title: "Mini Dash"
+    title: "AMOS"
 
     // Change this single value to customize the program's primary color.
     property color primaryColor: "#2d5fff"
@@ -110,6 +110,73 @@ Window {
             color: "#8a93a0"
             font.pixelSize: 14
             text: gaugeView.value.toFixed(0) + " " + gaugeView.unit
+        }
+    }
+
+    component VoltageGauge: Item {
+        id: voltageGauge
+        property url gaugeSource
+        property url gaugeSource1
+        property real value: 0
+        property real maximum: 20
+        property string unit: "V"
+        property real gaugeSize: Math.min(width, height - 20)
+
+        function clampedValue() {
+            return Math.max(0, Math.min(value, maximum))
+        }
+
+        function needleRotation() {
+            var clamped = clampedValue()
+            if (clamped <= 10)
+                return -40 - clamped / 10 * 5
+            if (clamped <= 11)
+                return -45 - (clamped - 10) * 6.75
+            if (clamped <= 12)
+                return -51.75 - (clamped - 11) * 12.8
+            if (clamped <= 13)
+                return -64.55 - (clamped - 12) * 17.2
+            if (clamped <= 15)
+                return -81.75 - (clamped - 13) * 11.625
+            if (clamped <= 16)
+                return -105 - (clamped - 15) * 11.43
+            if (clamped <= 17)
+                return -116.43 - (clamped - 16) * 11.37
+            return -127.8 - (clamped - 17) * (8.2 / 3)
+        }
+
+        Image {
+            id: gaugeImage1
+            anchors.top: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: voltageGauge.gaugeSize
+            height: width
+            source: voltageGauge.gaugeSource1
+            fillMode: Image.PreserveAspectFit
+            smooth: true
+        }
+
+        Image {
+            anchors.centerIn: gaugeImage
+            anchors.verticalCenterOffset: -gaugeImage.height * 0.20
+            width: gaugeImage.width * 0.88
+            height: width * 0.17
+            source: "../assets/Aiguille_volt.png"
+            fillMode: Image.PreserveAspectFit
+            smooth: true
+            transformOrigin: Item.Center
+            rotation: voltageGauge.needleRotation()
+        }
+
+        Image {
+            id: gaugeImage
+            anchors.top: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: voltageGauge.gaugeSize
+            height: width
+            source: voltageGauge.gaugeSource
+            fillMode: Image.PreserveAspectFit
+            smooth: true
         }
     }
 
@@ -322,6 +389,26 @@ Window {
                         value: backend.ramUsage
                         maximum: 100
                     }
+                }
+            }
+        }
+
+        Item {
+            id: voltagePage
+            property real voltage: backend.voltage
+
+            Column {
+                anchors.centerIn: parent
+                spacing: 10
+
+                VoltageGauge {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    gaugeSource: "../assets/cadran_voltmetre.png"
+                    gaugeSource1: "../assets/cadran_voltmetre1.png"
+                    width: 300
+                    height: 300
+                    value: voltagePage.voltage
+                    maximum: 20
                 }
             }
         }
@@ -855,8 +942,37 @@ Window {
                         }
 
                         Switch {
+                            id: kioskStartupSwitch
                             checked: backend.kioskAtStartup
                             onToggled: backend.setKioskAtStartup(checked)
+
+                            indicator: Rectangle {
+                                implicitWidth: 48
+                                implicitHeight: 26
+                                x: kioskStartupSwitch.leftPadding
+                                y: parent.height / 2 - height / 2
+                                radius: 13
+                                color: kioskStartupSwitch.checked ? root.primaryColor : "#3a424d"
+                                border.color: kioskStartupSwitch.checked ? root.primaryColor  : "#3d4553"
+
+                                Rectangle {
+                                    x: kioskStartupSwitch.checked ? parent.width - width : 0
+                                    width: 26
+                                    height: 26
+                                    radius: 13
+                                    color: kioskStartupSwitch.down ? "#cccccc" : "#ffffff"
+                                    border.color: kioskStartupSwitch.checked ? (kioskStartupSwitch.down ? root.primaryColor : root.primaryColor ) : "#999999"
+                                }
+                            }
+
+                            contentItem: Text {
+                                text: kioskStartupSwitch.text
+                                font: kioskStartupSwitch.font
+                                opacity: enabled ? 1.0 : 0.3
+                                color: kioskStartupSwitch.down ? root.primaryColor  : root.primaryColor
+                                verticalAlignment: Text.AlignVCenter
+                                leftPadding: kioskStartupSwitch.indicator.width + kioskStartupSwitch.spacing
+                            }
                         }
                     }
                 }
