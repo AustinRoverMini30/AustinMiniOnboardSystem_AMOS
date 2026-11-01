@@ -8,6 +8,7 @@ PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
 DATA_DIR = os.path.join(PROJECT_DIR, "data")
 CSV_FILE = os.path.join(DATA_DIR, "kilometers.csv")
 CSV_HEADERS = ["date", "kilometrage", "litres", "prix"]
+TANK_CAPACITY_LITRES = 36.0
 
 
 def ensure_csv_exists():
@@ -88,8 +89,24 @@ def calculate_consumption_stats(entries):
     if not consumptions:
         return None
 
-    # Calculer la moyenne globale
-    avg_consumption = sum(c['consumption'] for c in consumptions) / len(consumptions)
+    # Calculer la moyenne pondérée sur les 36 derniers litres renouvelés.
+    # Les consommations les plus récentes sont retenues en priorité.
+    average_litres = 0.0
+    average_km = 0.0
+    for consumption in reversed(consumptions):
+        litres_remaining = TANK_CAPACITY_LITRES - average_litres
+        litres_used = min(consumption['litres'], litres_remaining)
+        ratio = litres_used / consumption['litres']
+        average_litres += litres_used
+        average_km += consumption['km_parcourus'] * ratio
+        if average_litres >= TANK_CAPACITY_LITRES:
+            break
+
+    avg_consumption = (
+        (average_litres / average_km) * 100
+        if average_km > 0
+        else 0
+    )
 
     # Consommation entre les deux dernières entrées
     last_consumption = consumptions[-1]['consumption'] if consumptions else 0
@@ -97,6 +114,7 @@ def calculate_consumption_stats(entries):
     return {
         'consumptions': consumptions,
         'avg_consumption': avg_consumption,
+        'average_ready': average_litres >= TANK_CAPACITY_LITRES,
         'last_consumption': last_consumption,
         'total_litres': sum(c['litres'] for c in consumptions),
         'total_km': sum(c['km_parcourus'] for c in consumptions),

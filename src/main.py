@@ -4,6 +4,8 @@ import sys
 import threading
 from pathlib import Path
 
+from smbus2 import SMBus
+
 import psutil
 from PySide6.QtCore import (
     QObject,
@@ -16,9 +18,8 @@ from PySide6.QtCore import (
     QUrl,
     Qt
 )
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtGui import (QGuiApplication,QCursor)
 from PySide6.QtQml import QQmlApplicationEngine
-from PySide6.QtGui import QCursor
 
 from gpiozero import OutputDevice
 from gpiozero.exc import BadPinFactory
@@ -34,20 +35,23 @@ from KilometerManager import calculate_consumption_stats, load_entries, save_ent
 pc_dev = False
 FAN_PIN = 18
 
-BOOT_DIR = Path(__file__).resolve().parent.parent / "assets" / "boot"   # à adapter à ton arborescence
+BOOT_DIR = Path(__file__).resolve().parent.parent / "assets" / "boot"
 THUMBNAIL_DIR = Path(__file__).resolve().parent.parent / "assets" / "boot" / "thumbnails"
-settings = QSettings("AMOS", "MiniDash")
+settings = QSettings("AMOS", "AustinMiniOnboardSystem_AMOS")
 
 try:
     fan = OutputDevice(FAN_PIN, active_high=False, initial_value=False)
+    bus = SMBus(1)
 except BadPinFactory:
     fan = None
     pc_dev = True
+    bus = None
 
 class Backend(QObject):
     cpuTempChanged = Signal()
     speedChanged = Signal()
     gaugesChanged = Signal()
+    voltageChanged = Signal()
     updateStateChanged = Signal()
     updateCheckResult = Signal(str, str)
     updateDownloadResult = Signal(bool, str)
@@ -55,6 +59,7 @@ class Backend(QObject):
     updateStatusResult = Signal(str)
     journalChanged = Signal()
     bootVideoChanged = Signal()
+    kioskAtStartupChanged = Signal()
 
     def __init__(self):
         super().__init__()
@@ -70,6 +75,7 @@ class Backend(QObject):
         self._update_status = "En attente..."
         self._journal_rows = []
         self._journal_average = 0.0
+        self._journal_average_ready = False
         self._journal_last = 0.0
         self._journal_total_km = 0.0
         self._journal_total_litres = 0.0
@@ -93,7 +99,7 @@ class Backend(QObject):
         try:
             return int(Path("/sys/class/thermal/thermal_zone0/temp").read_text()) / 1000
         except OSError:
-            return 42.0
+            return 0
 
     def _update(self):
         self._tick += 1
@@ -103,7 +109,7 @@ class Backend(QObject):
         self.cpuTempChanged.emit()
         self.speedChanged.emit()
         self.gaugesChanged.emit()
-
+        self.voltageChanged.emit()
     @Property(float, notify=cpuTempChanged)
     def cpuTemp(self):
         return self._temp
@@ -123,6 +129,18 @@ class Backend(QObject):
     @Property(float, notify=gaugesChanged)
     def cpuUsage(self):
         return psutil.cpu_percent(interval=None)
+
+    @Property(float, notify=voltageChanged)
+    def voltage(self):
+        if (pc_dev):
+            return 12.0
+        try:
+            voltage = bus.read_word_data(0x48, 0x02)
+            voltage = ((voltage & 0xFF) << 8) | (voltage >> 8)
+            voltage = voltage * 0.00322
+            return round(voltage, 2)*4
+        except Exception:
+            return 0.0
 
     @Property(str, notify=updateStateChanged)
     def currentVersion(self):
@@ -155,6 +173,10 @@ class Backend(QObject):
     @Property(float, notify=journalChanged)
     def journalAverage(self):
         return self._journal_average
+
+    @Property(bool, notify=journalChanged)
+    def journalAverageReady(self):
+        return self._journal_average_ready
 
     @Property(float, notify=journalChanged)
     def journalLast(self):
@@ -212,6 +234,19 @@ class Backend(QObject):
         f = self._current_boot_file()
         return QUrl.fromLocalFile(str(f)) if f else QUrl()
 
+    @Property(bool, notify=kioskAtStartupChanged)
+    def kioskAtStartup(self):
+        return settings.value("kioskAtStartup", False, type=bool)
+
+    @Slot(bool)
+    def setKioskAtStartup(self, enabled):
+        enabled = bool(enabled)
+        if enabled == self.kioskAtStartup:
+            return
+        settings.setValue("kioskAtStartup", enabled)
+        settings.sync()
+        self.kioskAtStartupChanged.emit()
+
     @Slot(str)
     def setBootVideo(self, file):
         name = Path(file).name
@@ -225,6 +260,7 @@ class Backend(QObject):
         if not stats:
             self._journal_rows = []
             self._journal_average = 0.0
+            self._journal_average_ready = False
             self._journal_last = 0.0
             self._journal_total_km = 0.0
             self._journal_total_litres = 0.0
@@ -241,6 +277,7 @@ class Backend(QObject):
                 for row in stats["consumptions"]
             ]
             self._journal_average = stats["avg_consumption"]
+            self._journal_average_ready = stats["average_ready"]
             self._journal_last = stats["last_consumption"]
             self._journal_total_km = stats["total_km"]
             self._journal_total_litres = stats["total_litres"]
