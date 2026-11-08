@@ -15,7 +15,7 @@ REPOSITORY_NAME = "AustinMiniOnboardSystem_AMOS"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 USB_MOUNT_BASES = (Path("/media"), Path("/run/media"), Path("/mnt"))
 UPDATE_ARCHIVE_PATTERN = re.compile(
-    r"^AMOS-(v?\d+\.\d+\.\d+(?:[-.][0-9A-Za-z.]+)?)\.zip$"
+    r"^AustinMiniOnboardSystem_AMOS_(v?\d+\.\d+\.\d+(?:[-.][0-9A-Za-z.]+)?)\.zip$"
 )
 VERSION_PATTERN = re.compile(r"^v?\d+\.\d+\.\d+(?:[-.][0-9A-Za-z.]+)?$")
 
@@ -107,7 +107,10 @@ def get_update_archive_version(archive_path):
     archive_path = Path(archive_path)
     match = UPDATE_ARCHIVE_PATTERN.fullmatch(archive_path.name)
     if not match:
-        raise ValueError("Le nom de l'archive doit suivre le format AMOS-<version>.zip.")
+        raise ValueError(
+            "Le nom de l'archive doit suivre le format "
+            "AustinMiniOnboardSystem_AMOS_v<version>.zip."
+        )
 
     with zipfile.ZipFile(archive_path) as zip_file:
         _, version_member = _archive_project_files(zip_file)
@@ -124,7 +127,9 @@ def get_update_archive_version(archive_path):
 def find_usb_update_archive(mount_points=None):
     """Return the first valid AMOS version archive found at a mounted USB root."""
     for mountpoint in mount_points if mount_points is not None else _mounted_usb_paths():
-        for archive_path in sorted(Path(mountpoint).glob("AMOS-*.zip")):
+        for archive_path in sorted(
+            Path(mountpoint).glob("AustinMiniOnboardSystem_AMOS_*.zip")
+        ):
             version = get_update_archive_version(archive_path)
             return archive_path, version
     return None
@@ -139,7 +144,10 @@ def install_update_archive(archive_path, expected_version, status_callback=None)
 
         archive_name_match = UPDATE_ARCHIVE_PATTERN.fullmatch(archive_path.name)
         if not archive_name_match:
-            raise ValueError("Le nom de l'archive doit suivre le format AMOS-<version>.zip.")
+            raise ValueError(
+                "Le nom de l'archive doit suivre le format "
+                "AustinMiniOnboardSystem_AMOS_v<version>.zip."
+            )
 
         with zipfile.ZipFile(archive_path) as zip_file:
             project_files, version_member = _archive_project_files(zip_file)
