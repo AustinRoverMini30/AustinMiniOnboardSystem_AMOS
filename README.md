@@ -26,6 +26,15 @@ significantly from one version to another.
 - [ ] Interior lighting power control
 - [ ] More to come...
 
+### Mise à jour depuis une clé USB
+
+Placez une archive `AMOS-vX.Y.Z.zip` à la racine de la clé. L'archive doit
+contenir le projet et son fichier `VERSION` à la racine (ou dans le dossier
+unique du projet), avec une version identique à celle du nom de l'archive.
+AMOS détecte les archives sur les volumes montés sous `/media`, `/run/media`
+ou `/mnt`, affiche la version trouvée et propose **Installer USB**. L'installation
+ne démarre qu'après avoir appuyé sur ce bouton.
+
 ### Requirements
 
 - Raspberry Pi (tested with a Raspberry Pi 4B 2 GB)

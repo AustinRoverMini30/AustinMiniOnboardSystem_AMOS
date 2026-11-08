@@ -1,16 +1,23 @@
 import io
 import os
+import re
 import shutil
 import subprocess
 import zipfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
+import psutil
 import requests
 
 
 REPOSITORY_OWNER = "AustinRoverMini30"
 REPOSITORY_NAME = "AustinMiniOnboardSystem_AMOS"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+USB_MOUNT_BASES = (Path("/media"), Path("/run/media"), Path("/mnt"))
+UPDATE_ARCHIVE_PATTERN = re.compile(
+    r"^AMOS-(v?\d+\.\d+\.\d+(?:[-.][0-9A-Za-z.]+)?)\.zip$"
+)
+VERSION_PATTERN = re.compile(r"^v?\d+\.\d+\.\d+(?:[-.][0-9A-Za-z.]+)?$")
 
 
 def _version_number(version):
@@ -55,6 +62,119 @@ def _safe_destination(project_root, relative_path):
     return destination
 
 
+def _mounted_usb_paths():
+    paths = set()
+    for partition in psutil.disk_partitions(all=True):
+        mountpoint = Path(partition.mountpoint)
+        if any(mountpoint == base or base in mountpoint.parents for base in USB_MOUNT_BASES):
+            paths.add(mountpoint)
+    return sorted(paths)
+
+
+def _archive_project_files(zip_file):
+    files = [member for member in zip_file.infolist() if not member.is_dir()]
+    version_members = [
+        member for member in files
+        if PurePosixPath(member.filename).name == "VERSION"
+    ]
+    if len(version_members) != 1:
+        raise ValueError("L'archive doit contenir un unique fichier VERSION.")
+
+    version_path = PurePosixPath(version_members[0].filename)
+    if version_path.is_absolute() or ".." in version_path.parts:
+        raise ValueError("Chemin VERSION invalide dans l'archive.")
+    root_parts = version_path.parts[:-1]
+
+    project_files = []
+    for member in files:
+        member_path = PurePosixPath(member.filename)
+        if member_path.is_absolute() or ".." in member_path.parts:
+            raise ValueError(f"Chemin invalide dans l'archive : {member.filename}")
+        if root_parts:
+            if member_path.parts[:len(root_parts)] != root_parts:
+                raise ValueError("Les fichiers de l'archive ne partagent pas le dossier du projet.")
+            relative_parts = member_path.parts[len(root_parts):]
+        else:
+            relative_parts = member_path.parts
+        if relative_parts:
+            project_files.append((member, PurePosixPath(*relative_parts)))
+
+    project_files.sort(key=lambda entry: entry[1] == PurePosixPath("VERSION"))
+    return project_files, version_members[0]
+
+
+def get_update_archive_version(archive_path):
+    archive_path = Path(archive_path)
+    match = UPDATE_ARCHIVE_PATTERN.fullmatch(archive_path.name)
+    if not match:
+        raise ValueError("Le nom de l'archive doit suivre le format AMOS-<version>.zip.")
+
+    with zipfile.ZipFile(archive_path) as zip_file:
+        _, version_member = _archive_project_files(zip_file)
+        version = zip_file.read(version_member).decode("utf-8").strip()
+
+    if (
+        not VERSION_PATTERN.fullmatch(version)
+        or _version_number(version) != _version_number(match.group(1))
+    ):
+        raise ValueError("La version de VERSION ne correspond pas au nom de l'archive.")
+    return version
+
+
+def find_usb_update_archive(mount_points=None):
+    """Return the first valid AMOS version archive found at a mounted USB root."""
+    for mountpoint in mount_points if mount_points is not None else _mounted_usb_paths():
+        for archive_path in sorted(Path(mountpoint).glob("AMOS-*.zip")):
+            version = get_update_archive_version(archive_path)
+            return archive_path, version
+    return None
+
+
+def install_update_archive(archive_path, expected_version, status_callback=None):
+    """Install a validated local AMOS archive into the project directory."""
+    archive_path = Path(archive_path)
+    try:
+        if status_callback:
+            status_callback("Vérification de l'archive USB...")
+
+        archive_name_match = UPDATE_ARCHIVE_PATTERN.fullmatch(archive_path.name)
+        if not archive_name_match:
+            raise ValueError("Le nom de l'archive doit suivre le format AMOS-<version>.zip.")
+
+        with zipfile.ZipFile(archive_path) as zip_file:
+            project_files, version_member = _archive_project_files(zip_file)
+            version = zip_file.read(version_member).decode("utf-8").strip()
+            if (
+                not VERSION_PATTERN.fullmatch(version)
+                or _version_number(version) != _version_number(expected_version)
+                or _version_number(version) != _version_number(archive_name_match.group(1))
+            ):
+                raise ValueError("La version de l'archive a changé ou ne correspond pas.")
+
+            if status_callback:
+                status_callback("Extraction de l'archive USB...")
+
+            for index, (member, relative_path) in enumerate(project_files, start=1):
+                destination = _safe_destination(PROJECT_ROOT, str(relative_path))
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                with zip_file.open(member) as source, destination.open("wb") as target:
+                    shutil.copyfileobj(source, target)
+
+                permissions = member.external_attr >> 16
+                if permissions:
+                    destination.chmod(permissions)
+                if status_callback:
+                    status_callback(f"Extraction... {index}/{len(project_files)}")
+
+        if status_callback:
+            status_callback("Mise à jour USB terminée.")
+        return True
+    except (OSError, UnicodeDecodeError, zipfile.BadZipFile, ValueError) as error:
+        if status_callback:
+            status_callback(f"Erreur : {error}")
+        return False
+
+
 def download_latest_release(version, progress_callback=None, status_callback=None):
     """Télécharge et installe une release GitHub dans le répertoire du projet."""
     if status_callback:
@@ -87,21 +207,9 @@ def download_latest_release(version, progress_callback=None, status_callback=Non
             status_callback("Extraction des fichiers...")
 
         with zipfile.ZipFile(io.BytesIO(content.getvalue())) as zip_file:
-            members = [member for member in zip_file.infolist() if not member.is_dir()]
-            components = [member.filename.split("/", 1)[0] for member in members]
-            root_folder = components[0] if components and all(
-                component == components[0] for component in components
-            ) else None
-
-            for index, member in enumerate(members, start=1):
-                member_name = member.filename
-                relative_path = member_name
-                if root_folder and member_name.startswith(root_folder + "/"):
-                    relative_path = member_name[len(root_folder) + 1:]
-                if not relative_path:
-                    continue
-
-                destination = _safe_destination(PROJECT_ROOT, relative_path)
+            project_files, _ = _archive_project_files(zip_file)
+            for index, (member, relative_path) in enumerate(project_files, start=1):
+                destination = _safe_destination(PROJECT_ROOT, str(relative_path))
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 with zip_file.open(member) as source, destination.open("wb") as target:
                     shutil.copyfileobj(source, target)
@@ -110,13 +218,19 @@ def download_latest_release(version, progress_callback=None, status_callback=Non
                 if permissions:
                     destination.chmod(permissions)
                 if status_callback:
-                    status_callback(f"Extraction... {index}/{len(members)}")
+                    status_callback(f"Extraction... {index}/{len(project_files)}")
 
         if status_callback:
             status_callback("Mise à jour terminée.")
         print(f"Mise à jour vers la version {tag} terminée !")
         return True
-    except (OSError, requests.RequestException, zipfile.BadZipFile, ValueError) as error:
+    except (
+        OSError,
+        UnicodeDecodeError,
+        requests.RequestException,
+        zipfile.BadZipFile,
+        ValueError,
+    ) as error:
         message = f"Erreur: {error}"
         print(f"Erreur lors de la mise à jour: {error}")
         if status_callback:
