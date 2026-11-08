@@ -22,7 +22,11 @@ ApplicationWindow {
     }
 
     // Change this single value to customize the program's primary color.
-    property color primaryColor: "#2d5fff"
+    property color primaryColor: backend.primaryColor
+    property var primaryColorOptions: [
+        "#2d5fff", "#00a8e8", "#00b894", "#7cb342", "#f1c40f",
+        "#f39c12", "#e74c3c", "#e84393", "#9b59b6", "#ecf0f1"
+    ]
 
     // ─────────────────────────────────────────────
     //  Composants réutilisables
@@ -996,6 +1000,62 @@ ApplicationWindow {
                                 color: kioskStartupSwitch.down ? root.primaryColor  : root.primaryColor
                                 verticalAlignment: Text.AlignVCenter
                                 leftPadding: kioskStartupSwitch.indicator.width + kioskStartupSwitch.spacing
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 112
+                        radius: 14
+                        color: "#13181e"
+                        border.width: 1
+                        border.color: "#2c333c"
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 20
+                            anchors.rightMargin: 20
+                            anchors.topMargin: 12
+                            anchors.bottomMargin: 12
+                            spacing: 8
+
+                            EurostileText {
+                                Layout.fillWidth: true
+                                color: "#ffffff"
+                                font.pixelSize: 18
+                                text: "Couleur principale"
+                            }
+
+                            Row {
+                                Layout.alignment: Qt.AlignHCenter
+                                spacing: 14
+
+                                Repeater {
+                                    model: root.primaryColorOptions
+
+                                    delegate: Item {
+                                        id: colorOption
+                                        required property string modelData
+                                        width: 44
+                                        height: 44
+
+                                        Rectangle {
+                                            anchors.centerIn: parent
+                                            width: 38
+                                            height: 38
+                                            radius: width / 2
+                                            color: colorOption.modelData
+                                            border.width: root.primaryColor.toString() === colorOption.modelData ? 3 : 1
+                                            border.color: root.primaryColor.toString() === colorOption.modelData
+                                                ? "#ffffff" : "#59616c"
+                                        }
+
+                                        TapHandler {
+                                            onTapped: backend.setPrimaryColor(colorOption.modelData)
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

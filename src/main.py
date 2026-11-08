@@ -4,6 +4,7 @@ import sys
 import threading
 import zipfile
 from pathlib import Path
+from tokenize import String
 
 from smbus2 import SMBus
 
@@ -19,7 +20,7 @@ from PySide6.QtCore import (
     QUrl,
     Qt
 )
-from PySide6.QtGui import (QGuiApplication,QCursor)
+from PySide6.QtGui import QColor, QGuiApplication, QCursor
 from PySide6.QtQml import QQmlApplicationEngine
 
 from gpiozero import OutputDevice
@@ -63,6 +64,7 @@ class Backend(QObject):
     journalChanged = Signal()
     bootVideoChanged = Signal()
     kioskAtStartupChanged = Signal()
+    primaryColorChanged = Signal()
 
     def __init__(self):
         super().__init__()
@@ -267,6 +269,22 @@ class Backend(QObject):
             settings.setValue("bootVideo", name)
             settings.sync()
             self.bootVideoChanged.emit()
+
+    @Property(str, notify=primaryColorChanged)
+    def primaryColor(self):
+        return settings.value("primaryColor", "#2d5fff", type=str)
+
+    @Slot(str)
+    def setPrimaryColor(self, color):
+        color = QColor(color)
+        if not color.isValid():
+            return
+        color = color.name()
+        if color == self.primaryColor:
+            return
+        settings.setValue("primaryColor", color)
+        settings.sync()
+        self.primaryColorChanged.emit()
 
     def _load_journal(self):
         stats = calculate_consumption_stats(load_entries())
