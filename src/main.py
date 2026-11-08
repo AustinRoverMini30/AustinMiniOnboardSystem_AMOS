@@ -2,6 +2,7 @@ import math
 import subprocess
 import sys
 import threading
+import zipfile
 from pathlib import Path
 
 from smbus2 import SMBus
@@ -27,7 +28,9 @@ from gpiozero.exc import BadPinFactory
 from UpdateUtility import (
     check_for_updates,
     download_latest_release,
+    find_usb_update_archive,
     get_current_version,
+    install_update_archive,
     restart_application,
 )
 from KilometerManager import calculate_consumption_stats, load_entries, save_entry
@@ -70,6 +73,9 @@ class Backend(QObject):
         self._current_version = get_current_version()
         self._latest_version = ""
         self._update_available = False
+        self._update_source = ""
+        self._usb_update_archive = None
+        self._usb_scan_error = ""
         self._update_in_progress = False
         self._update_progress = 0.0
         self._update_status = "En attente..."
@@ -92,6 +98,11 @@ class Backend(QObject):
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._update)
         self._timer.start(300)
+
+        self._usb_update_timer = QTimer(self)
+        self._usb_update_timer.timeout.connect(self._check_usb_update)
+        self._usb_update_timer.start(3000)
+        self._check_usb_update()
 
     def _read_temp(self):
         try:
@@ -151,6 +162,10 @@ class Backend(QObject):
     @Property(bool, notify=updateStateChanged)
     def updateAvailable(self):
         return self._update_available
+
+    @Property(str, notify=updateStateChanged)
+    def updateSource(self):
+        return self._update_source
 
     @Property(bool, notify=updateStateChanged)
     def updateInProgress(self):
@@ -329,14 +344,88 @@ class Backend(QObject):
 
     @Slot(str, str)
     def _handle_update_check(self, latest, error):
+        if self._update_source == "usb":
+            return
         available = bool(latest)
         self._set_update_state(
             latest_version=latest,
             update_available=available,
+            update_source="online" if available else "",
             update_status=error or (
                 f"Version {latest} disponible." if available else "Votre version est à jour."
             ),
         )
+
+    def _check_usb_update(self):
+        if self._update_in_progress:
+            return
+        try:
+            candidate = find_usb_update_archive()
+        except (OSError, UnicodeDecodeError, ValueError, zipfile.BadZipFile) as error:
+            message = f"Archive USB invalide : {error}"
+            if message != self._usb_scan_error:
+                self._usb_scan_error = message
+                self._usb_update_archive = None
+                if self._update_source == "usb":
+                    self._set_update_state(
+                        latest_version="",
+                        update_available=False,
+                        update_source="",
+                        update_status=message,
+                    )
+                else:
+                    self._set_update_state(update_status=message)
+            return
+
+        had_scan_error = bool(self._usb_scan_error)
+        self._usb_scan_error = ""
+        if candidate:
+            archive_path, version = candidate
+            archive_path = str(archive_path)
+            self._usb_update_archive = archive_path
+
+            if version.removeprefix("v") == self._current_version.removeprefix("v"):
+                if self._update_source == "online" and self._update_available:
+                    return
+                if self._update_source == "usb" or self._update_status != "La version USB est déjà installée.":
+                    self._set_update_state(
+                        latest_version="",
+                        update_available=False,
+                        update_source="",
+                        update_status="La version USB est déjà installée.",
+                    )
+                return
+
+            if (
+                self._update_source != "usb"
+                or self._latest_version != version
+                or self._update_status != "Archive USB prête à installer."
+            ):
+                self._set_update_state(
+                    latest_version=version,
+                    update_available=True,
+                    update_source="usb",
+                    update_status="Archive USB prête à installer.",
+                )
+            return
+
+        if self._usb_update_archive:
+            self._usb_update_archive = None
+            if self._update_source == "usb":
+                self._set_update_state(
+                    latest_version="",
+                    update_available=False,
+                    update_source="",
+                    update_status="Archive USB retirée.",
+                )
+            elif self._update_source != "online":
+                self._set_update_state(update_status="Archive USB retirée.")
+        elif had_scan_error:
+            if self._update_source == "online" and self._update_available:
+                status = f"Version {self._latest_version} disponible."
+            else:
+                status = "Archive USB retirée."
+            self._set_update_state(update_status=status)
 
     @Slot()
     def startUpdate(self):
@@ -362,11 +451,18 @@ class Backend(QObject):
                 status_messages.append(message)
                 status(message)
 
-            success = download_latest_release(
-                self._latest_version,
-                progress_callback=progress,
-                status_callback=tracked_status,
-            )
+            if self._update_source == "usb":
+                success = install_update_archive(
+                    self._usb_update_archive,
+                    self._latest_version,
+                    status_callback=tracked_status,
+                )
+            else:
+                success = download_latest_release(
+                    self._latest_version,
+                    progress_callback=progress,
+                    status_callback=tracked_status,
+                )
             self.updateDownloadResult.emit(
                 success,
                 "" if success else (status_messages[-1] if status_messages else ""),

@@ -736,8 +736,10 @@ ApplicationWindow {
                     font.weight: Font.Medium
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.WordWrap
-                    text: backend.latestVersion
-                        ? "Nouvelle version : " + backend.latestVersion
+                    text: backend.updateAvailable
+                        ? (backend.updateSource === "usb"
+                           ? "Version sur USB : " : "Nouvelle version : ")
+                          + backend.latestVersion
                         : backend.updateStatus
                 }
 
@@ -782,8 +784,11 @@ ApplicationWindow {
                     }
 
                     DashButton {
-                        text: backend.updateInProgress ? "En cours..." : "Télécharger"
-                        implicitWidth: 170
+                        text: backend.updateInProgress
+                            ? "En cours..."
+                            : (backend.updateSource === "usb"
+                               ? "Installer USB" : "Télécharger")
+                        implicitWidth: 190
                         primary: true
                         fillColor: root.primaryColor
                         enabled: backend.updateAvailable && !backend.updateInProgress
