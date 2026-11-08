@@ -4,12 +4,22 @@ import QtQuick.Layouts
 import QtQuick.Effects
 import QtMultimedia
 
-Window {
+ApplicationWindow {
     id: root
     width: 800; height: 480
     visible: true
     color: "#0d1014"
     title: "AMOS"
+    font.family: eurostile.name
+
+    FontLoader {
+        id: eurostile
+        source: "../assets/fonts/eurostile-bold-extended.otf"
+    }
+
+    component EurostileText: Text {
+        font.family: eurostile.name
+    }
 
     // Change this single value to customize the program's primary color.
     property color primaryColor: "#2d5fff"
@@ -100,7 +110,7 @@ Window {
             }
         }
 
-        Text {
+        EurostileText {
             anchors.top: gaugeImage.bottom
             anchors.topMargin: 6
             anchors.horizontalCenter: parent.horizontalCenter
@@ -110,7 +120,7 @@ Window {
             text: gaugeView.title
         }
 
-        Text {
+        EurostileText {
             anchors.top: parent.top
             anchors.right: parent.right
             color: "#8a93a0"
@@ -217,7 +227,7 @@ Window {
             Behavior on border.color { ColorAnimation { duration: 120 } }
         }
 
-        Text {
+        EurostileText {
             anchors.right: parent.right
             anchors.rightMargin: 12
             anchors.verticalCenter: parent.verticalCenter
@@ -337,7 +347,7 @@ Window {
                 anchors.verticalCenterOffset: -30
                 spacing: 24
 
-                Text {
+                EurostileText {
                     id: clock
                     Layout.alignment: Qt.AlignHCenter
                     color: "#ffffff"
@@ -363,7 +373,7 @@ Window {
                 anchors.rightMargin: 18
                 spacing: 12
 
-                Text {
+                EurostileText {
                     Layout.alignment: Qt.AlignHCenter
                     color: "#ffffff"
                     font.pixelSize: 34
@@ -411,14 +421,15 @@ Window {
 
             Column {
                 anchors.centerIn: parent
+                anchors.verticalCenterOffset: -40
                 spacing: 10
 
                 VoltageGauge {
                     anchors.horizontalCenter: parent.horizontalCenter
                     gaugeSource: "../assets/cadran_voltmetre.png"
                     gaugeSource1: "../assets/cadran_voltmetre1.png"
-                    width: 300
-                    height: 300
+                    width: 380
+                    height: 380
                     value: voltagePage.voltage
                     maximum: 20
                 }
@@ -473,7 +484,7 @@ Window {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 40
 
-                    Text {
+                    EurostileText {
                         Layout.fillWidth: true
                         color: "#ffffff"
                         font.pixelSize: 30
@@ -577,12 +588,12 @@ Window {
                                 anchors.margins: 12
                                 spacing: 2
 
-                                Text {
+                                EurostileText {
                                     color: "#8a93a0"
                                     font.pixelSize: 12
                                     text: "MOYENNE"
                                 }
-                                Text {
+                                EurostileText {
                                     color: root.primaryColor
                                     font.pixelSize: 26
                                     font.weight: Font.DemiBold
@@ -590,7 +601,7 @@ Window {
                                           ? "--"
                                           : backend.journalAverage.toFixed(2) + " L/100"
                                 }
-                                Text {
+                                EurostileText {
                                     Layout.fillWidth: true
                                     color: "#8a93a0"
                                     font.pixelSize: 12
@@ -637,7 +648,7 @@ Window {
                     border.width: 1
                     border.color: "#2c333c"
 
-                    Text {
+                    EurostileText {
                         anchors.centerIn: parent
                         visible: backend.journalRows.length < 1
                         color: "#5b6571"
@@ -668,18 +679,18 @@ Window {
                                 anchors.rightMargin: 14
                                 spacing: 12
 
-                                Text {
+                                EurostileText {
                                     Layout.fillWidth: true
                                     color: "#ffffff"
                                     font.pixelSize: 17
                                     text: modelData.date
                                 }
-                                Text {
+                                EurostileText {
                                     color: "#8a93a0"
                                     font.pixelSize: 15
                                     text: modelData.distance.toFixed(0) + " km"
                                 }
-                                Text {
+                                EurostileText {
                                     Layout.preferredWidth: 130
                                     horizontalAlignment: Text.AlignRight
                                     color: root.primaryColor
@@ -702,7 +713,7 @@ Window {
                 width: parent.width * 0.8
                 spacing: 18
 
-                Text {
+                EurostileText {
                     Layout.alignment: Qt.AlignHCenter
                     color: "#ffffff"
                     font.pixelSize: 40
@@ -710,7 +721,7 @@ Window {
                     text: "Mise à jour"
                 }
 
-                Text {
+                EurostileText {
                     Layout.fillWidth: true
                     color: "#8a93a0"
                     font.pixelSize: 18
@@ -718,7 +729,7 @@ Window {
                     text: "Version installée : " + backend.currentVersion
                 }
 
-                Text {
+                EurostileText {
                     Layout.fillWidth: true
                     color: backend.latestVersion ? root.primaryColor : "#ffffff"
                     font.pixelSize: 22
@@ -749,7 +760,7 @@ Window {
                     }
                 }
 
-                Text {
+                EurostileText {
                     Layout.fillWidth: true
                     color: "#8a93a0"
                     font.pixelSize: 16
@@ -796,7 +807,7 @@ Window {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 40
 
-                    Text {
+                    EurostileText {
                         Layout.fillWidth: true
                         color: "#ffffff"
                         font.pixelSize: 30
@@ -883,7 +894,7 @@ Window {
                             border.color: videoCard.selected ? root.primaryColor : "#2c333c"
                         }
 
-                        Text {
+                        EurostileText {
                             anchors.left: parent.left
                             anchors.right: parent.right
                             anchors.top: thumbnail.bottom
@@ -896,7 +907,7 @@ Window {
                             text: videoCard.modelData.name
                         }
 
-                        Text {
+                        EurostileText {
                             anchors.right: parent.right
                             anchors.bottom: parent.bottom
                             anchors.rightMargin: 10
@@ -920,7 +931,7 @@ Window {
                 width: parent.width * 0.8
                 spacing: 24
 
-                Text {
+                EurostileText {
                     Layout.alignment: Qt.AlignHCenter
                     color: "#ffffff"
                     font.pixelSize: 40
@@ -942,7 +953,7 @@ Window {
                         anchors.rightMargin: 16
                         spacing: 16
 
-                        Text {
+                        EurostileText {
                             Layout.fillWidth: true
                             color: "#ffffff"
                             font.pixelSize: 20
@@ -973,7 +984,7 @@ Window {
                                 }
                             }
 
-                            contentItem: Text {
+                            contentItem: EurostileText {
                                 text: kioskStartupSwitch.text
                                 font: kioskStartupSwitch.font
                                 opacity: enabled ? 1.0 : 0.3
@@ -1071,7 +1082,7 @@ Window {
             border.color: "#2c333c"
         }
 
-        header: Text {
+        header: EurostileText {
             topPadding: 24
             color: "#ffffff"
             font.pixelSize: 26
@@ -1083,7 +1094,7 @@ Window {
         contentItem: ColumnLayout {
             spacing: 20
 
-            Text {
+            EurostileText {
                 Layout.fillWidth: true
                 color: "#8a93a0"
                 font.pixelSize: 16
