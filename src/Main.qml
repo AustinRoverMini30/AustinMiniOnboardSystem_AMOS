@@ -24,8 +24,9 @@ ApplicationWindow {
     // Change this single value to customize the program's primary color.
     property color primaryColor: backend.primaryColor
     property var primaryColorOptions: [
-        "#2d5fff", "#00a8e8", "#00b894", "#7cb342", "#f1c40f",
-        "#f39c12", "#e74c3c", "#e84393", "#9b59b6"
+        "#2d5fff", "#00b4ff", "#00c853", "#76d600",
+        "#ffc400", "#ff7a00", "#ff2d3d", "#ff2d95",
+        "#b030ff", "#00a35c"
     ]
 
     // ─────────────────────────────────────────────
