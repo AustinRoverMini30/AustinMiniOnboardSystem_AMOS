@@ -27,10 +27,10 @@ Item {
 
             DashButton {
                 primaryColor: bluetoothPage.primaryColor
-                implicitWidth: 112
-                implicitHeight: 42
+                implicitWidth: 40
+                implicitHeight: 40
                 font.pixelSize: 15
-                text: "‹ Paramètres"
+                text: "‹"
                 onClicked: bluetoothPage.backRequested()
             }
 

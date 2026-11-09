@@ -23,10 +23,10 @@ Item {
 
             DashButton {
                 primaryColor: updatePage.primaryColor
-                implicitWidth: 112
-                implicitHeight: 42
+                implicitWidth: 40
+                implicitHeight: 40
                 font.pixelSize: 15
-                text: "‹ Paramètres"
+                text: "‹"
                 onClicked: updatePage.backRequested()
             }
 
