@@ -8,6 +8,7 @@ Item {
     property color primaryColor: "#2d5fff"
     signal bluetoothRequested()
     signal updateRequested()
+    signal startupRequested()
     property var primaryColorOptions: [
         "#2d5fff", "#00b4ff", "#00c853", "#76d600",
         "#ffc400", "#ff7a00", "#ff2d3d", "#ff2d95",
@@ -166,6 +167,15 @@ Item {
                 font.pixelSize: 15
                 text: "Mise à jour"
                 onClicked: settingsPage.updateRequested()
+            }
+
+            DashButton {
+                primaryColor: settingsPage.primaryColor
+                Layout.fillWidth: true
+                Layout.preferredHeight: 52
+                font.pixelSize: 15
+                text: "Animations"
+                onClicked: settingsPage.startupRequested()
             }
         }
     }

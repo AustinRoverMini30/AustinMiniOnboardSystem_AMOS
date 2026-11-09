@@ -8,18 +8,33 @@ Item {
     id: startupPage
     property color primaryColor: "#2d5fff"
     signal previewRequested()
+    signal backRequested()
+
+    Rectangle {
+        anchors.fill: parent
+        color: "#0d1014"
+    }
 
     ColumnLayout {
         anchors.fill: parent
         anchors.topMargin: 16
         anchors.leftMargin: 24
         anchors.rightMargin: 24
-        anchors.bottomMargin: 108
+        anchors.bottomMargin: 20
         spacing: 10
 
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: 40
+
+            DashButton {
+                primaryColor: startupPage.primaryColor
+                implicitWidth: 112
+                implicitHeight: 40
+                font.pixelSize: 15
+                text: "‹ Paramètres"
+                onClicked: startupPage.backRequested()
+            }
 
             EurostileText {
                 Layout.fillWidth: true
