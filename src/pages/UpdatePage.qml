@@ -5,25 +5,49 @@ import "../components"
 Item {
     id: updatePage
     property color primaryColor: "#2d5fff"
+    signal backRequested()
+
+    Rectangle {
+        anchors.fill: parent
+        color: "#0d1014"
+    }
 
     ColumnLayout {
         anchors.centerIn: parent
-        anchors.verticalCenterOffset: -40
-        width: parent.width * 0.8
-        spacing: 18
+        width: parent.width * 0.9
+        spacing: 12
 
-        EurostileText {
-            Layout.alignment: Qt.AlignHCenter
-            color: "#ffffff"
-            font.pixelSize: 40
-            font.weight: Font.DemiBold
-            text: "Mise à jour"
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 42
+
+            DashButton {
+                primaryColor: updatePage.primaryColor
+                implicitWidth: 112
+                implicitHeight: 42
+                font.pixelSize: 15
+                text: "‹ Paramètres"
+                onClicked: updatePage.backRequested()
+            }
+
+            EurostileText {
+                Layout.fillWidth: true
+                color: "#ffffff"
+                font.pixelSize: 32
+                font.weight: Font.DemiBold
+                horizontalAlignment: Text.AlignHCenter
+                text: "Mise à jour"
+            }
+
+            Item {
+                Layout.preferredWidth: 112
+            }
         }
 
         EurostileText {
             Layout.fillWidth: true
             color: "#8a93a0"
-            font.pixelSize: 18
+            font.pixelSize: 16
             horizontalAlignment: Text.AlignHCenter
             text: "Version installée : " + backend.currentVersion
         }
@@ -31,7 +55,7 @@ Item {
         EurostileText {
             Layout.fillWidth: true
             color: backend.latestVersion ? updatePage.primaryColor : "#ffffff"
-            font.pixelSize: 22
+            font.pixelSize: 20
             font.weight: Font.Medium
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
@@ -72,8 +96,8 @@ Item {
 
         RowLayout {
             Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: 8
-            spacing: 16
+            Layout.topMargin: 4
+            spacing: 12
 
             DashButton {
                 primaryColor: updatePage.primaryColor

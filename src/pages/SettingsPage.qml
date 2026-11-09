@@ -7,6 +7,7 @@ Item {
     id: settingsPage
     property color primaryColor: "#2d5fff"
     signal bluetoothRequested()
+    signal updateRequested()
     property var primaryColorOptions: [
         "#2d5fff", "#00b4ff", "#00c853", "#76d600",
         "#ffc400", "#ff7a00", "#ff2d3d", "#ff2d95",
@@ -145,12 +146,27 @@ Item {
             }
         }
 
-        DashButton {
-            primaryColor: settingsPage.primaryColor
+        RowLayout {
             Layout.fillWidth: true
-            Layout.preferredHeight: 52
-            text: "Périphériques Bluetooth"
-            onClicked: settingsPage.bluetoothRequested()
+            spacing: 10
+
+            DashButton {
+                primaryColor: settingsPage.primaryColor
+                Layout.fillWidth: true
+                Layout.preferredHeight: 52
+                font.pixelSize: 15
+                text: "Bluetooth"
+                onClicked: settingsPage.bluetoothRequested()
+            }
+
+            DashButton {
+                primaryColor: settingsPage.primaryColor
+                Layout.fillWidth: true
+                Layout.preferredHeight: 52
+                font.pixelSize: 15
+                text: "Mise à jour"
+                onClicked: settingsPage.updateRequested()
+            }
         }
     }
 }
