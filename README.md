@@ -35,6 +35,13 @@ jaquette est lue depuis les métadonnées des pistes ou depuis une image nommée
 charge sont MP3, AAC, FLAC, M4A, OGG, WAV et WMA. Les préfixes numériques des
 noms de fichiers déterminent l'ordre des pistes lorsqu'ils sont présents.
 
+### Interface QML
+
+Chaque vue de l'application est définie dans son propre fichier sous
+`src/pages/`. Les composants visuels partagés sont regroupés dans
+`src/components/`, tandis que `src/Main.qml` assemble les pages et les contrôles
+globaux.
+
 ### Mise à jour depuis une clé USB
 
 Placez une archive `AustinMiniOnboardSystem_AMOS_vX.Y.Z.zip` à la racine de la

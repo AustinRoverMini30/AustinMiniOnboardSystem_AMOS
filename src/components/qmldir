@@ -1,0 +1,8 @@
+module AMOS.Components
+singleton DashboardFont 1.0 DashboardFont.qml
+DashButton 1.0 DashButton.qml
+EurostileText 1.0 EurostileText.qml
+GaugeView 1.0 GaugeView.qml
+JournalField 1.0 JournalField.qml
+VideoOverlay 1.0 VideoOverlay.qml
+VoltageGauge 1.0 VoltageGauge.qml
