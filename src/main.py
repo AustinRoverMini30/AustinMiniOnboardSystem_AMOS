@@ -267,9 +267,11 @@ class Backend(QObject):
             return []
 
         albums = []
-        for album_dir in sorted(MUSIC_DIR.iterdir(), key=lambda path: path.name.casefold()):
-            if not album_dir.is_dir():
-                continue
+        album_directories = sorted(
+            (path for path in MUSIC_DIR.rglob("*") if path.is_dir()),
+            key=lambda path: path.relative_to(MUSIC_DIR).as_posix().casefold(),
+        )
+        for album_dir in album_directories:
             tracks = []
             track_files = sorted(
                 (path for path in album_dir.iterdir()
@@ -289,7 +291,7 @@ class Backend(QObject):
                 })
             if tracks:
                 albums.append({
-                    "name": album_dir.name,
+                    "name": album_dir.relative_to(MUSIC_DIR).as_posix(),
                     "trackCount": len(tracks),
                     "tracks": tracks,
                     "cover": self._album_cover(album_dir, track_files),

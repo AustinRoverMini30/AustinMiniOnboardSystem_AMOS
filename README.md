@@ -29,8 +29,10 @@ significantly from one version to another.
 
 ### Lecteur multimédia
 
-Placez les pistes audio dans `music/<album>/`, avec un dossier par album. La
-jaquette est lue depuis les métadonnées des pistes ou depuis une image nommée
+Placez les pistes audio dans `music/<album>/`, ou dans des dossiers imbriqués
+(par exemple `music/<artiste>/<album>/`), avec les fichiers audio directement
+dans le dossier de chaque album. Tous les sous-dossiers de `music/` sont
+parcourus. La jaquette est lue depuis les métadonnées des pistes ou depuis une image nommée
 `cover`, `folder` ou `front` dans le dossier de l'album. Les formats pris en
 charge sont MP3, AAC, FLAC, M4A, OGG, WAV et WMA. Les préfixes numériques des
 noms de fichiers déterminent l'ordre des pistes lorsqu'ils sont présents.
