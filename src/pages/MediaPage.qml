@@ -1,3 +1,4 @@
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -39,15 +40,29 @@ Item {
                             % playbackTracks.length)
     }
 
+    AudioOutput {
+        id: audioOutput
+        volume: 1.0
+        muted: false
+    }
+
     MediaPlayer {
         id: audioPlayer
-        audioOutput: AudioOutput {}
+        audioOutput: audioOutput
+
         onMediaStatusChanged: {
+            console.log("AMOS MEDIA STATUS :", mediaStatus)
+
             if (mediaStatus === MediaPlayer.EndOfMedia)
                 mediaPage.nextTrack()
         }
+
+        onPlaybackStateChanged: {
+            console.log("AMOS AUDIO STATE :", playbackState)
+        }
+
         onErrorOccurred: (error, errorString) => {
-            console.warn("Audio :", errorString)
+            console.error("AMOS AUDIO ERROR :", error, errorString)
         }
     }
 
@@ -186,6 +201,7 @@ Item {
                                      === trackRow.modelData.number - 1
                                   ? "♪" : trackRow.modelData.number
                         }
+
                         EurostileText {
                             Layout.fillWidth: true
                             color: "#ffffff"
@@ -229,6 +245,7 @@ Item {
                               ? mediaPage.playbackTracks[mediaPage.currentTrackIndex].title
                               : "Aucune piste en cours"
                     }
+
                     EurostileText {
                         Layout.fillWidth: true
                         color: "#8a93a0"
@@ -258,6 +275,7 @@ Item {
                     enabled: backend.musicAlbums.length > 0
                     primary: true
                     fillColor: mediaPage.primaryColor
+
                     onClicked: {
                         if (audioPlayer.playbackState === MediaPlayer.PlayingState) {
                             audioPlayer.pause()
