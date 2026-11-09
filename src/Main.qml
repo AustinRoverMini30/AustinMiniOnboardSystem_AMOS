@@ -15,6 +15,7 @@ ApplicationWindow {
     font.family: DashboardFont.family
 
     property color primaryColor: backend.primaryColor
+    property bool showBluetoothPage: false
 
     Rectangle {
         anchors.fill: parent
@@ -33,20 +34,31 @@ ApplicationWindow {
         VoltagePage {}
         JournalPage { primaryColor: root.primaryColor }
         MediaPage { primaryColor: root.primaryColor }
-        BluetoothPage { primaryColor: root.primaryColor }
         UpdatePage { primaryColor: root.primaryColor }
         StartupPage {
             id: startupPage
             primaryColor: root.primaryColor
             onPreviewRequested: splash.start()
         }
-        SettingsPage { primaryColor: root.primaryColor }
+        SettingsPage {
+            primaryColor: root.primaryColor
+            onBluetoothRequested: root.showBluetoothPage = true
+        }
+    }
+
+    BluetoothPage {
+        anchors.fill: parent
+        z: 1
+        visible: root.showBluetoothPage
+        primaryColor: root.primaryColor
+        onBackRequested: root.showBluetoothPage = false
     }
 
     PageIndicator {
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 94
         anchors.horizontalCenter: parent.horizontalCenter
+        visible: !root.showBluetoothPage
         count: swipe.count
         currentIndex: swipe.currentIndex
 
@@ -65,6 +77,7 @@ ApplicationWindow {
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 20
         spacing: 20
+        visible: !root.showBluetoothPage
 
         DashButton {
             id: fanButton

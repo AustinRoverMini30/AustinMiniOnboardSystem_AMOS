@@ -6,6 +6,12 @@ import "../components"
 Item {
     id: bluetoothPage
     property color primaryColor: "#2d5fff"
+    signal backRequested()
+
+    Rectangle {
+        anchors.fill: parent
+        color: "#0d1014"
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -18,6 +24,15 @@ Item {
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: 42
+
+            DashButton {
+                primaryColor: bluetoothPage.primaryColor
+                implicitWidth: 112
+                implicitHeight: 42
+                font.pixelSize: 15
+                text: "‹ Paramètres"
+                onClicked: bluetoothPage.backRequested()
+            }
 
             EurostileText {
                 Layout.fillWidth: true
