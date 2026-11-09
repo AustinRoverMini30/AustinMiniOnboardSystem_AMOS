@@ -1,4 +1,7 @@
+import hashlib
 import math
+import mimetypes
+import re
 import subprocess
 import sys
 import threading
@@ -17,6 +20,7 @@ from PySide6.QtCore import (
     Signal,
     Slot,
     QSettings,
+    QStandardPaths,
     QUrl,
     Qt
 )
@@ -25,6 +29,8 @@ from PySide6.QtQml import QQmlApplicationEngine
 
 from gpiozero import OutputDevice
 from gpiozero.exc import BadPinFactory
+from mutagen import File as MutagenFile
+from mutagen import MutagenError
 
 from UpdateUtility import (
     check_for_updates,
@@ -41,6 +47,10 @@ FAN_PIN = 18
 
 BOOT_DIR = Path(__file__).resolve().parent.parent / "assets" / "boot"
 THUMBNAIL_DIR = Path(__file__).resolve().parent.parent / "assets" / "boot" / "thumbnails"
+MUSIC_DIR = Path(__file__).resolve().parent.parent / "music"
+MUSIC_ART_DIR = Path(QStandardPaths.writableLocation(
+    QStandardPaths.StandardLocation.GenericCacheLocation
+)) / "amos" / "album-art"
 settings = QSettings("AMOS", "AustinMiniOnboardSystem_AMOS")
 
 try:
@@ -63,6 +73,7 @@ class Backend(QObject):
     updateStatusResult = Signal(str)
     journalChanged = Signal()
     bootVideoChanged = Signal()
+    musicLibraryChanged = Signal()
     kioskAtStartupChanged = Signal()
     primaryColorChanged = Signal()
 
@@ -88,6 +99,7 @@ class Backend(QObject):
         self._journal_total_km = 0.0
         self._journal_total_litres = 0.0
         self._journal_total_price = 0.0
+        self._music_albums = self._load_music_library()
         self._load_journal()
 
         self.updateCheckResult.connect(self._handle_update_check)
@@ -248,6 +260,91 @@ class Backend(QObject):
     def bootVideoUrl(self):
         f = self._current_boot_file()
         return QUrl.fromLocalFile(str(f)) if f else QUrl()
+
+    def _load_music_library(self):
+        supported_formats = {".aac", ".flac", ".m4a", ".mp3", ".ogg", ".wav", ".wma"}
+        if not MUSIC_DIR.is_dir():
+            return []
+
+        albums = []
+        for album_dir in sorted(MUSIC_DIR.iterdir(), key=lambda path: path.name.casefold()):
+            if not album_dir.is_dir():
+                continue
+            tracks = []
+            track_files = sorted(
+                (path for path in album_dir.iterdir()
+                 if path.is_file() and path.suffix.casefold() in supported_formats),
+                key=lambda path: (
+                    int(match.group(1)) if (match := re.match(r"^\s*(\d+)", path.stem)) else float("inf"),
+                    path.name.casefold(),
+                ),
+            )
+            for index, track_file in enumerate(track_files, start=1):
+                title = re.sub(r"^\s*\d+\s*[-._ ]+\s*", "", track_file.stem).strip()
+                tracks.append({
+                    "number": index,
+                    "title": title or track_file.stem,
+                    "file": track_file.name,
+                    "url": QUrl.fromLocalFile(str(track_file)),
+                })
+            if tracks:
+                albums.append({
+                    "name": album_dir.name,
+                    "trackCount": len(tracks),
+                    "tracks": tracks,
+                    "cover": self._album_cover(album_dir, track_files),
+                })
+        return albums
+
+    @staticmethod
+    def _album_cover(album_dir, track_files):
+        image_extensions = {".bmp", ".gif", ".jpeg", ".jpg", ".png", ".webp"}
+        cover_names = {"cover", "folder", "front"}
+        for image in sorted(album_dir.iterdir(), key=lambda path: path.name.casefold()):
+            if image.is_file() and image.suffix.casefold() in image_extensions:
+                if image.stem.casefold() in cover_names:
+                    return QUrl.fromLocalFile(str(image))
+
+        for track_file in track_files:
+            try:
+                audio = MutagenFile(track_file)
+            except MutagenError as error:
+                print(f"Impossible de lire les métadonnées de {track_file}: {error}")
+                continue
+            if audio is None or audio.tags is None:
+                continue
+
+            artwork = next(
+                (picture.data for picture in getattr(audio, "pictures", []) if picture.data),
+                None,
+            )
+            mime_type = next(
+                (picture.mime for picture in getattr(audio, "pictures", []) if picture.data),
+                "",
+            )
+            if artwork is None:
+                tags = audio.tags
+                apic_frames = tags.getall("APIC") if hasattr(tags, "getall") else []
+                if apic_frames:
+                    artwork = apic_frames[0].data
+                    mime_type = apic_frames[0].mime
+                elif tags.get("covr"):
+                    artwork = bytes(tags["covr"][0])
+                    mime_type = "image/png" if getattr(tags["covr"][0], "imageformat", 0) == 14 else "image/jpeg"
+            if artwork:
+                extension = mimetypes.guess_extension(mime_type) or ".jpg"
+                if extension == ".jpe":
+                    extension = ".jpg"
+                MUSIC_ART_DIR.mkdir(parents=True, exist_ok=True)
+                album_key = hashlib.sha256(str(album_dir.resolve()).encode()).hexdigest()
+                cover_path = MUSIC_ART_DIR / f"{album_key}{extension}"
+                cover_path.write_bytes(artwork)
+                return QUrl.fromLocalFile(str(cover_path))
+        return QUrl()
+
+    @Property("QVariantList", notify=musicLibraryChanged)
+    def musicAlbums(self):
+        return self._music_albums
 
     @Property(bool, notify=kioskAtStartupChanged)
     def kioskAtStartup(self):

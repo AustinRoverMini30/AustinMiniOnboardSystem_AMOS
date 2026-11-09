@@ -14,6 +14,7 @@ significantly from one version to another.
 - [x] Clock display
 - [x] Raspberry Pi statistics display
 - [x] Logbook for recording fuel fill-ups
+- [x] Multimedia player with album and track browsing
 - [x] Update system
 - [x] Startup animations
 - [x] Wing fan activation
@@ -25,6 +26,14 @@ significantly from one version to another.
 - [ ] Automatic power-on when the engine starts
 - [ ] Interior lighting power control
 - [ ] More to come...
+
+### Lecteur multimédia
+
+Placez les pistes audio dans `music/<album>/`, avec un dossier par album. La
+jaquette est lue depuis les métadonnées des pistes ou depuis une image nommée
+`cover`, `folder` ou `front` dans le dossier de l'album. Les formats pris en
+charge sont MP3, AAC, FLAC, M4A, OGG, WAV et WMA. Les préfixes numériques des
+noms de fichiers déterminent l'ordre des pistes lorsqu'ils sont présents.
 
 ### Mise à jour depuis une clé USB
 
