@@ -33,6 +33,7 @@ ApplicationWindow {
         VoltagePage {}
         JournalPage { primaryColor: root.primaryColor }
         MediaPage { primaryColor: root.primaryColor }
+        BluetoothPage { primaryColor: root.primaryColor }
         UpdatePage { primaryColor: root.primaryColor }
         StartupPage {
             id: startupPage

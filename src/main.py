@@ -74,6 +74,8 @@ class Backend(QObject):
     journalChanged = Signal()
     bootVideoChanged = Signal()
     musicLibraryChanged = Signal()
+    bluetoothStateChanged = Signal()
+    bluetoothOperationResult = Signal(object, str, str)
     kioskAtStartupChanged = Signal()
     primaryColorChanged = Signal()
 
@@ -100,6 +102,10 @@ class Backend(QObject):
         self._journal_total_litres = 0.0
         self._journal_total_price = 0.0
         self._music_albums = self._load_music_library()
+        self._bluetooth_devices = []
+        self._bluetooth_busy = False
+        self._bluetooth_status = "Appuyez sur Rechercher pour détecter les appareils."
+        self._bluetooth_connected_address = ""
         self._load_journal()
 
         self.updateCheckResult.connect(self._handle_update_check)
@@ -108,6 +114,7 @@ class Backend(QObject):
         self.updateStatusResult.connect(
             lambda status: self._set_update_state(update_status=status)
         )
+        self.bluetoothOperationResult.connect(self._finish_bluetooth_operation)
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._update)
@@ -347,6 +354,188 @@ class Backend(QObject):
     @Property("QVariantList", notify=musicLibraryChanged)
     def musicAlbums(self):
         return self._music_albums
+
+    @Property("QVariantList", notify=bluetoothStateChanged)
+    def bluetoothDevices(self):
+        return self._bluetooth_devices
+
+    @Property(bool, notify=bluetoothStateChanged)
+    def bluetoothBusy(self):
+        return self._bluetooth_busy
+
+    @Property(str, notify=bluetoothStateChanged)
+    def bluetoothStatus(self):
+        return self._bluetooth_status
+
+    @Property(str, notify=bluetoothStateChanged)
+    def bluetoothConnectedAddress(self):
+        return self._bluetooth_connected_address
+
+    @staticmethod
+    def _run_bluetoothctl(*arguments, timeout=12):
+        result = subprocess.run(
+            ["bluetoothctl", *arguments],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+        output = "\n".join(part for part in (result.stdout, result.stderr) if part).strip()
+        if result.returncode != 0:
+            raise RuntimeError(output or f"bluetoothctl s'est terminé avec le code {result.returncode}.")
+        return output
+
+    @staticmethod
+    def _parse_bluetooth_devices(output):
+        devices = {}
+        for line in output.splitlines():
+            match = re.search(
+                r"(?:^|\[NEW\]\s+)Device\s+([0-9A-Fa-f:]{17})\s+(.+?)\s*$",
+                line.strip(),
+            )
+            if match:
+                address, name = match.groups()
+                devices[address.upper()] = {
+                    "address": address.upper(),
+                    "name": name,
+                    "connected": False,
+                }
+        return devices
+
+    @staticmethod
+    def _connected_bluetooth_addresses(output):
+        return {
+            match.group(1).upper()
+            for line in output.splitlines()
+            if (match := re.search(r"Device\s+([0-9A-Fa-f:]{17})", line))
+        }
+
+    @Slot()
+    def scanBluetoothDevices(self):
+        if self._bluetooth_busy:
+            return
+        self._bluetooth_busy = True
+        self._bluetooth_status = "Recherche des appareils Bluetooth..."
+        connected_address_before_scan = self._bluetooth_connected_address
+        self.bluetoothStateChanged.emit()
+
+        def worker():
+            try:
+                self._run_bluetoothctl("--timeout", "8", "scan", "on", timeout=15)
+                device_output = self._run_bluetoothctl("devices")
+                connected_output = self._run_bluetoothctl("devices", "Connected")
+                devices = self._parse_bluetooth_devices(device_output)
+                connected = self._connected_bluetooth_addresses(connected_output)
+                for address in connected:
+                    if address in devices:
+                        devices[address]["connected"] = True
+                status = (
+                    f"{len(devices)} appareil(s) détecté(s)."
+                    if devices else "Aucun appareil détecté. Vérifiez que l'enceinte est allumée."
+                )
+                connected_address = next(iter(connected), "")
+                self.bluetoothOperationResult.emit(
+                    {"devices": sorted(devices.values(), key=lambda device: device["name"].casefold())},
+                    connected_address,
+                    status,
+                )
+            except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
+                self.bluetoothOperationResult.emit(
+                    None,
+                    connected_address_before_scan,
+                    f"Recherche Bluetooth impossible : {error}",
+                )
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    @Slot(str)
+    def connectBluetoothDevice(self, address):
+        address = address.strip().upper()
+        if self._bluetooth_busy:
+            return
+        if not re.fullmatch(r"[0-9A-F]{2}(?::[0-9A-F]{2}){5}", address):
+            self._bluetooth_status = "Adresse Bluetooth invalide."
+            self.bluetoothStateChanged.emit()
+            return
+
+        self._bluetooth_busy = True
+        self._bluetooth_status = "Connexion à l'enceinte..."
+        devices_before_connect = [dict(device) for device in self._bluetooth_devices]
+        connected_address_before_connect = self._bluetooth_connected_address
+        self.bluetoothStateChanged.emit()
+
+        def worker():
+            try:
+                info = self._run_bluetoothctl("info", address)
+                if not re.search(r"^\s*Paired:\s*yes\s*$", info, re.MULTILINE | re.IGNORECASE):
+                    self._run_bluetoothctl(
+                        "--agent", "NoInputNoOutput", "pair", address, timeout=30
+                    )
+                    info = self._run_bluetoothctl("info", address)
+                    if not re.search(r"^\s*Paired:\s*yes\s*$", info, re.MULTILINE | re.IGNORECASE):
+                        raise RuntimeError("L'appairage a échoué. Vérifiez que l'enceinte est en mode appairage.")
+
+                self._run_bluetoothctl("trust", address)
+                self._run_bluetoothctl("connect", address, timeout=20)
+                info = self._run_bluetoothctl("info", address)
+                if not re.search(r"^\s*Connected:\s*yes\s*$", info, re.MULTILINE | re.IGNORECASE):
+                    raise RuntimeError("L'enceinte n'a pas confirmé la connexion.")
+
+                devices = devices_before_connect
+                for device in devices:
+                    device["connected"] = device["address"] == address
+                self.bluetoothOperationResult.emit(
+                    {"devices": devices},
+                    address,
+                    "Enceinte connectée.",
+                )
+            except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
+                self.bluetoothOperationResult.emit(
+                    None,
+                    connected_address_before_connect,
+                    f"Connexion Bluetooth impossible : {error}",
+                )
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    @Slot()
+    def disconnectBluetoothDevice(self):
+        address = self._bluetooth_connected_address
+        if not address or self._bluetooth_busy:
+            return
+        self._bluetooth_busy = True
+        self._bluetooth_status = "Déconnexion de l'enceinte..."
+        devices_before_disconnect = [dict(device) for device in self._bluetooth_devices]
+        self.bluetoothStateChanged.emit()
+
+        def worker():
+            try:
+                self._run_bluetoothctl("disconnect", address)
+                devices = devices_before_disconnect
+                for device in devices:
+                    device["connected"] = False
+                self.bluetoothOperationResult.emit(
+                    {"devices": devices},
+                    "",
+                    "Enceinte déconnectée.",
+                )
+            except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
+                self.bluetoothOperationResult.emit(
+                    None,
+                    address,
+                    f"Déconnexion Bluetooth impossible : {error}",
+                )
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    @Slot(object, str, str)
+    def _finish_bluetooth_operation(self, result, connected_address, status):
+        if result is not None:
+            self._bluetooth_devices = result["devices"]
+        self._bluetooth_connected_address = connected_address
+        self._bluetooth_status = status
+        self._bluetooth_busy = False
+        self.bluetoothStateChanged.emit()
 
     @Property(bool, notify=kioskAtStartupChanged)
     def kioskAtStartup(self):

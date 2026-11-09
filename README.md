@@ -15,6 +15,7 @@ significantly from one version to another.
 - [x] Raspberry Pi statistics display
 - [x] Logbook for recording fuel fill-ups
 - [x] Multimedia player with album and track browsing
+- [x] Bluetooth speaker pairing and connection
 - [x] Update system
 - [x] Startup animations
 - [x] Wing fan activation
@@ -43,6 +44,12 @@ Chaque vue de l'application est définie dans son propre fichier sous
 `src/pages/`. Les composants visuels partagés sont regroupés dans
 `src/components/`, tandis que `src/Main.qml` assemble les pages et les contrôles
 globaux.
+
+### Bluetooth
+
+Depuis la page Bluetooth, lancez une recherche et sélectionnez **Connecter**
+pour appairer puis connecter une enceinte. L'outil système BlueZ (`bluez`) est
+installé par `install.sh`.
 
 ### Mise à jour depuis une clé USB
 

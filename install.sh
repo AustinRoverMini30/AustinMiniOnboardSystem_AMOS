@@ -210,7 +210,7 @@ if [[ $INSTALL_DEPS -eq 1 ]]; then
     export DEBIAN_FRONTEND=noninteractive
     apt-get update
     BASE_PKGS=(python3-venv python3-pip libegl1 libgles2 libgbm1 libdrm2 libinput10
-               libxkbcommon0 libfontconfig1 libdbus-1-3 fonts-dejavu-core)
+               libxkbcommon0 libfontconfig1 libdbus-1-3 fonts-dejavu-core bluez)
 
     if [[ "$MODE" == "apt" ]]; then
         apt-get install -y "${BASE_PKGS[@]}" python3-gpiozero python3-lgpio
