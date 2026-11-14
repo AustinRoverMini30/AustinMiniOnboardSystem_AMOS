@@ -628,6 +628,9 @@ class Backend(QObject):
 
     @Slot(float)
     def _handle_update_progress(self, progress):
+        if progress < 0:
+            self._set_update_state(update_progress=-1.0)
+            return
         progress = max(0.0, min(1.0, float(progress)))
         if progress < self._update_progress:
             return
@@ -744,8 +747,10 @@ class Backend(QObject):
         )
 
         def progress(downloaded, total):
-            if total:
+            if total > 0:
                 self.updateProgressResult.emit(downloaded / total)
+            else:
+                self.updateProgressResult.emit(-1.0)
 
         def status(message):
             self.updateStatusResult.emit(message)

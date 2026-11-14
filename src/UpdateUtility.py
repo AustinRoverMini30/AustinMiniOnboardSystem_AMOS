@@ -208,8 +208,11 @@ def download_latest_release(version, progress_callback=None, status_callback=Non
                 if chunk:
                     content.write(chunk)
                     downloaded += len(chunk)
-                    if progress_callback and total_size:
+                    if progress_callback:
                         progress_callback(downloaded, total_size)
+
+            if progress_callback:
+                progress_callback(downloaded, total_size or downloaded)
 
         if status_callback:
             status_callback("Extraction des fichiers...")
