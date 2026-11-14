@@ -55,18 +55,16 @@ settings = QSettings("AMOS", "AustinMiniOnboardSystem_AMOS")
 
 try:
     fan = OutputDevice(FAN_PIN, active_high=False, initial_value=False)
+    bus = SMBus(1)
 except BadPinFactory:
     fan = None
     pc_dev = True
-
-if (not pc_dev):
-    try:
-        bus = SMBus(1)
-    except FileNotFoundError:
-        bus = None
-
-else:
     bus = None
+
+if (pc_dev):
+    voltemeter_failure = True
+else:
+    voltemeter_failure = False
 
 class Backend(QObject):
     cpuTempChanged = Signal()
@@ -175,13 +173,15 @@ class Backend(QObject):
             voltage = bus.read_word_data(0x40, 0x02)
             voltage = ((voltage & 0xFF) << 8) | (voltage >> 8)
             voltage = voltage * 0.00125
+            voltemeter_failure = False
             return round(voltage, 2)
         except Exception:
+            voltemeter_failure = True
             return 0.0
 
     @Property(bool, notify=voltageChanged)
-    def busAvailable(self):
-        return bus is not None
+    def voltmeterAvailable(self):
+        return not voltemeter_failure
 
     @Property(str, notify=updateStateChanged)
     def currentVersion(self):
