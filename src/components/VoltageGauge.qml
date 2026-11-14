@@ -61,8 +61,8 @@ Item {
         anchors.horizontalCenter: gaugeImage.horizontalCenter
         anchors.verticalCenter: gaugeImage.verticalCenter
         anchors.verticalCenterOffset: gaugeImage.height * 0.17
-        width: height * 4 / 3
-        height: gaugeImage.height * 0.40
+        width: height * 4.5 / 3
+        height: gaugeImage.height * 0.45
         visible: voltageGauge.failureMode
         fillMode: VideoOutput.PreserveAspectFit
     }
