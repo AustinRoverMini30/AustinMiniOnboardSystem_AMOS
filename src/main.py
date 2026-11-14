@@ -755,7 +755,7 @@ class Backend(QObject):
         )
 
         def progress(downloaded, total):
-            if total:
+            if total > 0:
                 self.updateProgressResult.emit(downloaded / total)
 
         def status(message):
