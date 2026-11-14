@@ -3,3 +3,4 @@ requests
 gpiozero
 pyside6
 smbus2
+mutagen

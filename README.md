@@ -14,6 +14,8 @@ significantly from one version to another.
 - [x] Clock display
 - [x] Raspberry Pi statistics display
 - [x] Logbook for recording fuel fill-ups
+- [x] Multimedia player with album and track browsing
+- [x] Bluetooth speaker pairing and connection
 - [x] Update system
 - [x] Startup animations
 - [x] Wing fan activation
@@ -25,6 +27,29 @@ significantly from one version to another.
 - [ ] Automatic power-on when the engine starts
 - [ ] Interior lighting power control
 - [ ] More to come...
+
+### Lecteur multimédia
+
+Placez les pistes audio dans `music/<album>/`, ou dans des dossiers imbriqués
+(par exemple `music/<artiste>/<album>/`), avec les fichiers audio directement
+dans le dossier de chaque album. Tous les sous-dossiers de `music/` sont
+parcourus. La jaquette est lue depuis les métadonnées des pistes ou depuis une image nommée
+`cover`, `folder` ou `front` dans le dossier de l'album. Les formats pris en
+charge sont MP3, AAC, FLAC, M4A, OGG, WAV et WMA. Les préfixes numériques des
+noms de fichiers déterminent l'ordre des pistes lorsqu'ils sont présents.
+
+### Interface QML
+
+Chaque vue de l'application est définie dans son propre fichier sous
+`src/pages/`. Les composants visuels partagés sont regroupés dans
+`src/components/`, tandis que `src/Main.qml` assemble les pages et les contrôles
+globaux.
+
+### Bluetooth
+
+Depuis la page Bluetooth, lancez une recherche et sélectionnez **Connecter**
+pour appairer puis connecter une enceinte. L'outil système BlueZ (`bluez`) est
+installé par `install.sh`.
 
 ### Mise à jour depuis une clé USB
 
