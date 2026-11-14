@@ -4,7 +4,7 @@ import "../components"
 Item {
     id: voltagePage
     property real voltage: backend.voltage
-    property bool busAvailable: backend.busAvailable
+    property bool busAvailable: backend.voltmeterAvailable
 
     Column {
         anchors.centerIn: parent
