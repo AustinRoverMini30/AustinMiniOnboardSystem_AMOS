@@ -74,7 +74,7 @@ Item {
 
             Rectangle {
                 anchors.fill: parent
-                radius: height / 2
+                radius: height / 10
                 color: "#252a31"
             }
 
@@ -82,29 +82,11 @@ Item {
                 id: determinateProgress
                 width: parent.width * Math.max(0, Math.min(1, backend.updateProgress))
                 height: parent.height
-                radius: height / 2
+                radius: height / 10
                 color: updatePage.primaryColor
-                visible: backend.updateProgress >= 0
 
                 Behavior on width {
                     NumberAnimation { duration: 150 }
-                }
-            }
-
-            Rectangle {
-                id: indeterminateProgress
-                width: parent.width * 0.3
-                height: parent.height
-                radius: height / 2
-                color: updatePage.primaryColor
-                visible: backend.updateProgress < 0
-
-                NumberAnimation on x {
-                    from: -indeterminateProgress.width
-                    to: indeterminateProgress.parent.width
-                    duration: 1100
-                    loops: Animation.Infinite
-                    running: indeterminateProgress.visible
                 }
             }
 
@@ -115,9 +97,7 @@ Item {
                 font.pixelSize: 13
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
-                text: backend.updateProgress < 0
-                    ? "Téléchargement..."
-                    : Math.round(backend.updateProgress * 100) + " %"
+                text: Math.round(backend.updateProgress * 100) + " %"
             }
         }
 
