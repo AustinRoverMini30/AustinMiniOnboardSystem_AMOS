@@ -55,10 +55,17 @@ settings = QSettings("AMOS", "AustinMiniOnboardSystem_AMOS")
 
 try:
     fan = OutputDevice(FAN_PIN, active_high=False, initial_value=False)
-    bus = SMBus(1)
 except BadPinFactory:
     fan = None
     pc_dev = True
+
+if (not pc_dev):
+    try:
+        bus = SMBus(1)
+    except FileNotFoundError:
+        bus = None
+
+else:
     bus = None
 
 class Backend(QObject):
@@ -171,6 +178,10 @@ class Backend(QObject):
             return round(voltage, 2)
         except Exception:
             return 0.0
+
+    @Property(bool, notify=voltageChanged)
+    def busAvailable(self):
+        return bus is not None
 
     @Property(str, notify=updateStateChanged)
     def currentVersion(self):

@@ -1,6 +1,7 @@
 
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Effects
 import QtQuick.Layouts
 import QtMultimedia
 import "../components"
@@ -126,35 +127,57 @@ Item {
                 boundsBehavior: Flickable.StopAtBounds
                 ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
-                delegate: Image {
+                delegate: Item {
                     id: albumCover
                     required property var modelData
                     width: albumGrid.cellWidth - 10
                     height: albumGrid.cellHeight - 10
-                    source: modelData.cover
-                    fillMode: Image.PreserveAspectCrop
-                    asynchronous: true
-                    clip: true
 
-                    Rectangle {
+                    Item {
+                        id: albumArtwork
                         anchors.fill: parent
-                        color: mediaPage.primaryColor
-                        visible: albumCover.status !== Image.Ready
+                        visible: false
 
-                        EurostileText {
-                            anchors.centerIn: parent
-                            color: "#0d1014"
-                            font.pixelSize: 48
-                            text: "♪"
+                        Image {
+                            id: albumCoverImage
+                            anchors.fill: parent
+                            source: albumCover.modelData.cover
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                        }
+
+                        Rectangle {
+                            anchors.fill: parent
+                            color: mediaPage.primaryColor
+                            visible: albumCoverImage.status !== Image.Ready
+
+                            EurostileText {
+                                anchors.centerIn: parent
+                                color: "#0d1014"
+                                font.pixelSize: 48
+                                text: "♪"
+                            }
                         }
                     }
 
-                    Rectangle {
+                    Item {
+                        id: albumCoverMask
                         anchors.fill: parent
-                        radius: 12
-                        color: "transparent"
-                        border.width: 1
-                        border.color: "#2c333c"
+                        layer.enabled: true
+                        visible: false
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: 12
+                            color: "white"
+                        }
+                    }
+
+                    MultiEffect {
+                        anchors.fill: parent
+                        source: albumArtwork
+                        maskEnabled: true
+                        maskSource: albumCoverMask
                     }
 
                     TapHandler {

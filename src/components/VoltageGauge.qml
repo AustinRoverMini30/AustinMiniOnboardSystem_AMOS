@@ -1,9 +1,11 @@
 import QtQuick
+import QtMultimedia
 
 Item {
     id: voltageGauge
     property url gaugeSource
     property url gaugeSource1
+    property bool failureMode: false
     property real value: 0
     property real maximum: 20
     property string unit: "V"
@@ -39,8 +41,42 @@ Item {
         width: voltageGauge.gaugeSize
         height: width
         source: voltageGauge.gaugeSource1
+        visible: !voltageGauge.failureMode
         fillMode: Image.PreserveAspectFit
         smooth: true
+    }
+
+    Rectangle {
+        anchors.horizontalCenter: gaugeImage.horizontalCenter
+        anchors.verticalCenter: gaugeImage.verticalCenter
+        anchors.verticalCenterOffset: gaugeImage.height * 0.17
+        width: gaugeImage.width * 0.70
+        height: gaugeImage.height * 0.40
+        color: "black"
+        visible: voltageGauge.failureMode
+    }
+
+    VideoOutput {
+        id: failureVideoOutput
+        anchors.horizontalCenter: gaugeImage.horizontalCenter
+        anchors.verticalCenter: gaugeImage.verticalCenter
+        anchors.verticalCenterOffset: gaugeImage.height * 0.17
+        width: height * 4 / 3
+        height: gaugeImage.height * 0.40
+        visible: voltageGauge.failureMode
+        fillMode: VideoOutput.PreserveAspectFit
+    }
+
+    MediaPlayer {
+        id: failureVideoPlayer
+        source: voltageGauge.failureMode ? "../../assets/voltmeter_fail.mp4" : ""
+        videoOutput: failureVideoOutput
+        audioOutput: AudioOutput { muted: true }
+        loops: MediaPlayer.Infinite
+
+        onErrorOccurred: (error, errorString) => {
+            console.error("Erreur vidéo du voltmètre :", error, errorString)
+        }
     }
 
     Image {
@@ -49,6 +85,7 @@ Item {
         width: gaugeImage.width * 0.88
         height: width * 0.17
         source: "../../assets/Aiguille_volt.png"
+        visible: !voltageGauge.failureMode
         fillMode: Image.PreserveAspectFit
         smooth: true
         transformOrigin: Item.Center
@@ -70,5 +107,17 @@ Item {
         source: voltageGauge.gaugeSource
         fillMode: Image.PreserveAspectFit
         smooth: true
+    }
+
+    onFailureModeChanged: {
+        if (failureMode)
+            failureVideoPlayer.play()
+        else
+            failureVideoPlayer.stop()
+    }
+
+    Component.onCompleted: {
+        if (failureMode)
+            failureVideoPlayer.play()
     }
 }
