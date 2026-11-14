@@ -68,20 +68,36 @@ Item {
 
         Item {
             Layout.fillWidth: true
-            Layout.preferredHeight: 8
+            Layout.preferredHeight: 22
             visible: backend.updateInProgress
+            clip: true
 
             Rectangle {
                 anchors.fill: parent
-                radius: 4
+                radius: height / 10
                 color: "#252a31"
             }
 
             Rectangle {
+                id: determinateProgress
                 width: parent.width * Math.max(0, Math.min(1, backend.updateProgress))
                 height: parent.height
-                radius: 4
+                radius: height / 10
                 color: updatePage.primaryColor
+
+                Behavior on width {
+                    NumberAnimation { duration: 150 }
+                }
+            }
+
+            EurostileText {
+                anchors.fill: parent
+                z: 1
+                color: "#ffffff"
+                font.pixelSize: 13
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                text: Math.round(backend.updateProgress * 100) + " %"
             }
         }
 
