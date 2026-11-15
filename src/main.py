@@ -666,8 +666,12 @@ class Backend(QObject):
 
     @Slot(float)
     def _handle_update_progress(self, progress):
+        progress = float(progress)
+        if progress < 0:
+            self._set_update_state(update_progress=-1.0)
+            return
         progress = max(0.0, min(1.0, float(progress)))
-        if progress < self._update_progress:
+        if self._update_progress >= 0 and progress < self._update_progress:
             return
         self._set_update_state(update_progress=progress)
 
@@ -777,13 +781,12 @@ class Backend(QObject):
             return
         self._set_update_state(
             update_in_progress=True,
-            update_progress=0.0,
+            update_progress=0.0 if self._update_source == "online" else -1.0,
             update_status="Démarrage...",
         )
 
-        def progress(downloaded, total):
-            if total > 0:
-                self.updateProgressResult.emit(downloaded / total)
+        def progress(value):
+            self.updateProgressResult.emit(value)
 
         def status(message):
             self.updateStatusResult.emit(message)
@@ -799,6 +802,7 @@ class Backend(QObject):
                 success = install_update_archive(
                     self._usb_update_archive,
                     self._latest_version,
+                    progress_callback=progress,
                     status_callback=tracked_status,
                 )
             else:

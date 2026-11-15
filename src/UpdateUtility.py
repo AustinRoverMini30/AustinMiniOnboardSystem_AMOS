@@ -135,7 +135,9 @@ def find_usb_update_archive(mount_points=None):
     return None
 
 
-def install_update_archive(archive_path, expected_version, status_callback=None):
+def install_update_archive(
+    archive_path, expected_version, progress_callback=None, status_callback=None
+):
     """Install a validated local AMOS archive into the project directory."""
     archive_path = Path(archive_path)
     try:
@@ -171,6 +173,8 @@ def install_update_archive(archive_path, expected_version, status_callback=None)
                 permissions = member.external_attr >> 16
                 if permissions:
                     destination.chmod(permissions)
+                if progress_callback:
+                    progress_callback(index / len(project_files))
                 if status_callback:
                     status_callback(f"Extraction... {index}/{len(project_files)}")
 
@@ -190,8 +194,8 @@ def download_latest_release(version, progress_callback=None, status_callback=Non
 
     tag = f"v{_version_number(version)}"
     release_url = (
-        f"https://github.com/{REPOSITORY_OWNER}/{REPOSITORY_NAME}"
-        f"/archive/refs/tags/{tag}.zip"
+        f"https://github.com/{REPOSITORY_OWNER}/{REPOSITORY_NAME}/releases/download/"
+        f"{tag}/{REPOSITORY_NAME}_{tag}.zip"
     )
 
     try:
@@ -204,12 +208,15 @@ def download_latest_release(version, progress_callback=None, status_callback=Non
             if status_callback:
                 status_callback("Téléchargement en cours...")
 
+            if progress_callback:
+                progress_callback(0.0 if total_size else -1.0)
+
             for chunk in response.iter_content(chunk_size=8192):
                 if chunk:
                     content.write(chunk)
                     downloaded += len(chunk)
                     if progress_callback and total_size:
-                        progress_callback(downloaded, total_size)
+                        progress_callback(downloaded / total_size)
 
         if status_callback:
             status_callback("Extraction des fichiers...")

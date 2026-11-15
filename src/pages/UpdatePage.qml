@@ -84,9 +84,27 @@ Item {
                 height: parent.height
                 radius: height / 10
                 color: updatePage.primaryColor
+                visible: backend.updateProgress >= 0
 
                 Behavior on width {
                     NumberAnimation { duration: 150 }
+                }
+            }
+
+            Rectangle {
+                id: indeterminateProgress
+                width: parent.width * 0.3
+                height: parent.height
+                radius: height / 10
+                color: updatePage.primaryColor
+                visible: backend.updateProgress < 0
+
+                NumberAnimation on x {
+                    from: -indeterminateProgress.width
+                    to: indeterminateProgress.parent.width
+                    duration: 1100
+                    loops: Animation.Infinite
+                    running: indeterminateProgress.visible
                 }
             }
 
@@ -97,7 +115,9 @@ Item {
                 font.pixelSize: 13
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
-                text: Math.round(backend.updateProgress * 100) + " %"
+                text: backend.updateProgress < 0
+                    ? "..."
+                    : Math.round(backend.updateProgress * 100) + " %"
             }
         }
 
