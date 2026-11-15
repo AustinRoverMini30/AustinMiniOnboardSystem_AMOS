@@ -4,7 +4,7 @@ import "../components"
 Item {
     id: voltagePage
     property real voltage: backend.voltage
-    property bool busAvailable: backend.voltmeterAvailable
+    property bool voltmeterAvailable: backend.voltmeterAvailable
 
     Column {
         anchors.centerIn: parent
@@ -19,7 +19,7 @@ Item {
             gaugeSource1: "../../assets/cadran_voltmetre1.png"
             value: voltagePage.voltage
             maximum: 20
-            failureMode: !voltagePage.busAvailable
+            failureMode: !voltagePage.voltmeterAvailable
         }
     }
 }
