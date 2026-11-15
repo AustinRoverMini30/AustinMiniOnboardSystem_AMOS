@@ -69,11 +69,17 @@ Item {
 
     MediaPlayer {
         id: failureVideoPlayer
-        source: voltageGauge.failureMode ? "../../assets/voltmeter_fail.mp4" : ""
+        source: "../../assets/voltmeter_fail.mp4"
         videoOutput: failureVideoOutput
         audioOutput: AudioOutput { muted: true }
         loops: MediaPlayer.Infinite
 
+        onMediaStatusChanged: {
+            if (voltageGauge.failureMode
+                    && (mediaStatus === MediaPlayer.LoadedMedia
+                        || mediaStatus === MediaPlayer.BufferedMedia))
+                play()
+        }
         onErrorOccurred: (error, errorString) => {
             console.error("Erreur vidéo du voltmètre :", error, errorString)
         }
