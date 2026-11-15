@@ -5,6 +5,7 @@ import re
 import subprocess
 import sys
 import threading
+import time
 import zipfile
 from pathlib import Path
 from tokenize import String
@@ -62,9 +63,9 @@ except BadPinFactory:
     bus = None
 
 if (pc_dev):
-    voltemeter_failure = True
+    bus= None
 else:
-    voltemeter_failure = False
+    bus = SMBus(1)
 
 class Backend(QObject):
     cpuTempChanged = Signal()
@@ -111,6 +112,8 @@ class Backend(QObject):
         self._bluetooth_busy = False
         self._bluetooth_status = "Appuyez sur Rechercher pour détecter les appareils."
         self._bluetooth_connected_address = ""
+        self._voltage = 0.0
+        self._voltmeter_available = False
         self._load_journal()
 
         self.updateCheckResult.connect(self._handle_update_check)
@@ -130,6 +133,14 @@ class Backend(QObject):
         self._usb_update_timer.start(3000)
         self._check_usb_update()
 
+        # La lecture I2C tourne hors du thread graphique Qt.
+        self._voltage_thread = threading.Thread(
+            target=self._voltage_loop,
+            name="INA226Reader",
+            daemon=True,
+        )
+        self._voltage_thread.start()
+
     def _read_temp(self):
         try:
             return int(Path("/sys/class/thermal/thermal_zone0/temp").read_text()) / 1000
@@ -144,7 +155,32 @@ class Backend(QObject):
         self.cpuTempChanged.emit()
         self.speedChanged.emit()
         self.gaugesChanged.emit()
-        self.voltageChanged.emit()
+
+    def _voltage_loop(self):
+        """Lit l'INA226 en arrière-plan sans bloquer l'interface Qt."""
+        while True:
+            was_available = self._voltmeter_available
+
+            try:
+                if bus is None:
+                    raise OSError("Bus I2C indisponible")
+
+                raw = bus.read_word_data(0x40, 0x02)
+                raw = ((raw & 0xFF) << 8) | (raw >> 8)
+
+                self._voltage = round(raw * 0.00125, 2)
+                self._voltmeter_available = True
+                self.voltageChanged.emit()
+
+            except Exception:
+                self._voltmeter_available = False
+                # Notifie QML uniquement lors du passage disponible -> indisponible.
+                if was_available:
+                    self.voltageChanged.emit()
+
+            # Fréquence de mesure : 2 Hz.
+            time.sleep(0.5)
+
     @Property(float, notify=cpuTempChanged)
     def cpuTemp(self):
         return self._temp
@@ -167,21 +203,12 @@ class Backend(QObject):
 
     @Property(float, notify=voltageChanged)
     def voltage(self):
-        if (pc_dev):
-            return 12.0
-        try:
-            voltage = bus.read_word_data(0x40, 0x02)
-            voltage = ((voltage & 0xFF) << 8) | (voltage >> 8)
-            voltage = voltage * 0.00125
-            voltemeter_failure = False
-            return round(voltage, 2)
-        except Exception:
-            voltemeter_failure = True
-            return 0.0
+        # Cette propriété ne fait qu'exposer la dernière valeur mise en cache.
+        return self._voltage if self._voltmeter_available else 0.0
 
     @Property(bool, notify=voltageChanged)
     def voltmeterAvailable(self):
-        return not voltemeter_failure
+        return self._voltmeter_available
 
     @Property(str, notify=updateStateChanged)
     def currentVersion(self):
