@@ -42,6 +42,7 @@ ApplicationWindow {
             onUpdateRequested: root.showUpdatePage = true
             onStartupRequested: root.showStartupPage = true
         }
+        ModelTestPage { primaryColor: root.primaryColor }
     }
 
     BluetoothPage {

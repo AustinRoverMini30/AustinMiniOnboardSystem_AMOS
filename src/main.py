@@ -2,6 +2,7 @@ import hashlib
 import math
 import mimetypes
 import re
+import struct
 import subprocess
 import sys
 import threading
@@ -52,7 +53,53 @@ MUSIC_DIR = Path(__file__).resolve().parent.parent / "music"
 MUSIC_ART_DIR = Path(QStandardPaths.writableLocation(
     QStandardPaths.StandardLocation.GenericCacheLocation
 )) / "amos" / "album-art"
+STL_MODEL_PATH = Path(__file__).resolve().parent.parent / "assets" / "Raspberry Pi 4 Model B.stl"
 settings = QSettings("AMOS", "AustinMiniOnboardSystem_AMOS")
+
+
+def _prepare_stl_model():
+    data = STL_MODEL_PATH.read_bytes()
+    if len(data) < 84:
+        raise ValueError("Le fichier STL est incomplet.")
+
+    triangle_count = struct.unpack_from("<I", data, 80)[0]
+    if len(data) != 84 + triangle_count * 50:
+        raise ValueError("Le fichier STL n'est pas au format binaire attendu.")
+
+    model_hash = hashlib.sha256(data).hexdigest()
+    cache_dir = MUSIC_ART_DIR.parent
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    obj_path = cache_dir / f"raspberry-pi-4-{model_hash}.obj"
+    if not obj_path.is_file():
+        temporary_path = obj_path.with_suffix(".obj.tmp")
+        try:
+            with temporary_path.open("w", encoding="ascii") as model_file:
+                vertex_index = 1
+                for triangle_index in range(triangle_count):
+                    offset = 84 + triangle_index * 50
+                    triangle = struct.unpack_from("<12f", data, offset)
+                    if not all(math.isfinite(value) for value in triangle):
+                        raise ValueError("Le fichier STL contient des valeurs invalides.")
+                    nx, ny, nz = triangle[:3]
+                    vertices = triangle[3:12]
+                    for index in range(0, 9, 3):
+                        x, y, z = vertices[index:index + 3]
+                        model_file.write(f"v {x:.7g} {y:.7g} {z:.7g}\n")
+                    model_file.write(f"vn {nx:.7g} {ny:.7g} {nz:.7g}\n")
+                    normal_index = triangle_index + 1
+                    model_file.write(
+                        f"f {vertex_index}//{normal_index} "
+                        f"{vertex_index + 1}//{normal_index} "
+                        f"{vertex_index + 2}//{normal_index}\n"
+                    )
+                    vertex_index += 3
+            temporary_path.replace(obj_path)
+        except (OSError, ValueError):
+            temporary_path.unlink(missing_ok=True)
+            raise
+
+    return QUrl.fromLocalFile(str(obj_path))
+
 
 try:
     fan = OutputDevice(FAN_PIN, active_high=False, initial_value=False)
@@ -114,7 +161,13 @@ class Backend(QObject):
         self._bluetooth_connected_address = ""
         self._voltage = 0.0
         self._voltmeter_available = False
+        self._stl_model_url = QUrl()
+        self._stl_model_error = ""
         self._load_journal()
+        try:
+            self._stl_model_url = _prepare_stl_model()
+        except (OSError, ValueError, struct.error) as error:
+            self._stl_model_error = str(error)
 
         self.updateCheckResult.connect(self._handle_update_check)
         self.updateDownloadResult.connect(self._handle_update_result)
@@ -599,6 +652,14 @@ class Backend(QObject):
     @Property(str, notify=primaryColorChanged)
     def primaryColor(self):
         return settings.value("primaryColor", "#2d5fff", type=str)
+
+    @Property(QUrl, constant=True)
+    def stlModelUrl(self):
+        return self._stl_model_url
+
+    @Property(str, constant=True)
+    def stlModelError(self):
+        return self._stl_model_error
 
     @Slot(str)
     def setPrimaryColor(self, color):

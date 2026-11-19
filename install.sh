@@ -223,6 +223,7 @@ if [[ $INSTALL_DEPS -eq 1 ]]; then
         for pkg in qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-layouts \
                    qml6-module-qtquick-window qml6-module-qtquick-templates \
                    qml6-module-qtqml-workerscript qml6-module-qtmultimedia qml6-module-qtquick-effects \
+                   qml6-module-qtquick3d qml6-module-qtquick3d-assetutils \
                    i2c-tools python3-smbus; do
             apt-get install -y "$pkg" 2>/dev/null || warn "Paquet $pkg indisponible (ignoré)"
         done
