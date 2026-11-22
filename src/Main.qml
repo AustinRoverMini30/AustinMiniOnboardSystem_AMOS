@@ -31,6 +31,9 @@ ApplicationWindow {
         id: swipe
         anchors.fill: parent
 
+                DashboardLight {
+            primaryColor: root.primaryColor
+        }
         ClockPage {}
         SystemPage { primaryColor: root.primaryColor }
         VoltagePage {}
@@ -42,6 +45,8 @@ ApplicationWindow {
             onUpdateRequested: root.showUpdatePage = true
             onStartupRequested: root.showStartupPage = true
         }
+
+
     }
 
     BluetoothPage {
