@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 
 Item {
     id: dashboardLightPage
@@ -17,16 +18,42 @@ Item {
         id: halo
         anchors.fill: parent
 
-        Rectangle {
-            anchors.centerIn: parent
-            width: Math.min(parent.width, parent.height * 1.5) * 0.50
-            height: parent.height * 0.10
-            color: dashboardLightPage.haloColor
-            opacity: 0.42
-            transform: Translate { x: 160; y: -60 }
+        transform: Translate { x: 155; y: -80 }
 
-            layer.enabled: true
-            layer.smooth: true
+        readonly property real haloWidth: Math.min(parent.width, parent.height * 1.5) * 0.50
+        readonly property real haloHeight: parent.height * 0.05
+
+        Rectangle {
+            id: lampRectangle
+            anchors.centerIn: parent
+            width: halo.haloWidth
+            height: halo.haloHeight
+            radius: 12
+            color: "transparent"
+        }
+
+        RectangularShadow {
+            anchors.fill: lampRectangle
+            anchors.bottomMargin: -20
+            color: Qt.rgba(dashboardLightPage.haloColor.r,
+                           dashboardLightPage.haloColor.g,
+                           dashboardLightPage.haloColor.b, 0.34)
+            blur: 24
+            spread: 10
+            offset: Qt.point(0, 10)
+            radius: lampRectangle.radius
+        }
+
+        RectangularShadow {
+            anchors.fill: lampRectangle
+            anchors.bottomMargin: -10
+            color: Qt.rgba(dashboardLightPage.haloColor.r,
+                           dashboardLightPage.haloColor.g,
+                           dashboardLightPage.haloColor.b, 0.58)
+            blur: 10
+            spread: 4
+            offset: Qt.point(0, 4)
+            radius: lampRectangle.radius
         }
     }
 
