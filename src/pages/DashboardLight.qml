@@ -26,42 +26,62 @@ Item {
         anchors.fill: parent
         z: 1
 
-        transform: Translate { x: 155; y: -80 }
+        transform: Translate { x: 150; y: -80 }
 
         readonly property real haloWidth: Math.min(parent.width, parent.height * 1.5) * 0.50
         readonly property real haloHeight: parent.height * 0.05
+        readonly property color glowColor: dashboardLightPage.haloColor
 
-        Rectangle {
+        // Rectangle de référence (invisible), identique à l'original
+        Item {
             id: lampRectangle
             anchors.centerIn: parent
             width: halo.haloWidth
             height: halo.haloHeight
+        }
+
+        // Halo large et diffus (ancien : blur 24, spread 10, offset 0/10, bas +20)
+        Rectangle {
+            id: glowOuterSource
+            x: lampRectangle.x - 10
+            y: lampRectangle.y
+            width: lampRectangle.width + 20
+            height: lampRectangle.height + 40
             radius: 12
-            color: "transparent"
+            color: Qt.rgba(halo.glowColor.r, halo.glowColor.g, halo.glowColor.b, 0.34)
+            visible: false
+            layer.enabled: true
         }
 
-        RectangularShadow {
-            anchors.fill: lampRectangle
-            anchors.bottomMargin: -20
-            color: Qt.rgba(dashboardLightPage.haloColor.r,
-                           dashboardLightPage.haloColor.g,
-                           dashboardLightPage.haloColor.b, 0.34)
-            blur: 24
-            spread: 10
-            offset: Qt.point(0, 10)
-            radius: lampRectangle.radius
+        MultiEffect {
+            anchors.fill: glowOuterSource
+            source: glowOuterSource
+            autoPaddingEnabled: true
+            blurEnabled: true
+            blurMax: 100
+            blur: 24 / 32
         }
 
-        RectangularShadow {
-            anchors.fill: lampRectangle
-            anchors.bottomMargin: -10
-            color: Qt.rgba(dashboardLightPage.haloColor.r,
-                           dashboardLightPage.haloColor.g,
-                           dashboardLightPage.haloColor.b, 0.58)
-            blur: 10
-            spread: 4
-            offset: Qt.point(0, 4)
-            radius: lampRectangle.radius
+        // Halo serré et intense (ancien : blur 10, spread 4, offset 0/4, bas +10)
+        Rectangle {
+            id: glowInnerSource
+            x: lampRectangle.x - 4
+            y: lampRectangle.y
+            width: lampRectangle.width + 8
+            height: lampRectangle.height + 18
+            radius: 12
+            color: Qt.rgba(halo.glowColor.r, halo.glowColor.g, halo.glowColor.b, 0.58)
+            visible: false
+            layer.enabled: true
+        }
+
+        MultiEffect {
+            anchors.fill: glowInnerSource
+            source: glowInnerSource
+            autoPaddingEnabled: true
+            blurEnabled: true
+            blurMax: 100
+            blur: 10 / 32
         }
     }
 
@@ -107,13 +127,13 @@ Item {
                     delegate: Item {
                         id: colorOption
                         required property string modelData
-                        width: 30
-                        height: 30
+                        width: 42
+                        height: 42
 
                         Rectangle {
                             anchors.centerIn: parent
-                            width: 26
-                            height: 26
+                            width: 42
+                            height: 42
                             radius: width / 2
                             color: colorOption.modelData
                             border.width: dashboardLightPage.haloColor.toString()
