@@ -1,4 +1,3 @@
-import colorsys
 import hashlib
 import logging
 import math
@@ -133,23 +132,28 @@ def set_led_animation(mode, phase):
         return
 
     try:
-        value = 1.0
-        if mode == 2:
-            value = 0.55 + 0.45 * (0.5 + 0.5 * math.sin(phase * 2 * math.pi))
+        base_color = QColor(settings.value("dashboardLightColor", "#ffc400", type=str))
+        if not base_color.isValid():
+            logger.error("Couleur mémorisée des LED invalide.")
+            return
 
         for index in range(LED_COUNT):
             position = index / max(LED_COUNT - 1, 1)
             if mode == 0:
-                hue = (phase + position) % 1
+                distance = abs(position - phase)
             elif mode == 1:
-                hue = (phase * 0.35 + position * 0.55) % 1
+                distance = abs(abs(position - 0.5) * 2 - phase)
             else:
-                hue = (0.08 + position * 0.72) % 1
+                distance = abs(abs(position - 0.5) * 2 - (1 - phase))
 
-            red, green, blue = colorsys.hsv_to_rgb(hue, 0.9, value)
+            intensity = 0.0 + 0.88 * math.exp(-((distance / 0.12) ** 2) * 3)
             strip.setPixelColor(
                 index,
-                Color(round(red * 255), round(green * 255), round(blue * 255)),
+                Color(
+                    round(base_color.red() * intensity),
+                    round(base_color.green() * intensity),
+                    round(base_color.blue() * intensity),
+                ),
             )
         strip.show()
     except Exception:
@@ -176,6 +180,7 @@ class Backend(QObject):
     primaryColorChanged = Signal()
     ledAvailabilityChanged = Signal()
     ledAnimationModeChanged = Signal()
+    dashboardLightColorChanged = Signal()
 
     def __init__(self):
         super().__init__()
@@ -230,6 +235,8 @@ class Backend(QObject):
 
         self._led_animation_phase = 0.0
         self._led_animation_active = False
+        self._led_startup_animation_active = False
+        self._led_preview_active = False
         self._led_animation_timer = QTimer(self)
         self._led_animation_timer.timeout.connect(self._update_led_animation)
 
@@ -262,7 +269,10 @@ class Backend(QObject):
         self.gaugesChanged.emit()
 
     def _update_led_animation(self):
-        if not self._led_animation_active or not led_available:
+        if not led_available:
+            self._led_animation_timer.stop()
+            return
+        if not self._led_animation_active:
             return
         self._led_animation_phase = (self._led_animation_phase + 0.02) % 1.0
         was_available = led_available
@@ -734,8 +744,11 @@ class Backend(QObject):
             logger.error("Couleur de LED invalide : %s", color)
             return
         color = parsed_color.name()
+        color_changed = color != self.dashboardLightColor
         settings.setValue("dashboardLightColor", color)
         settings.sync()
+        if color_changed:
+            self.dashboardLightColorChanged.emit()
         if not self._led_animation_active:
             set_led_color(color)
         if was_available and not led_available:
@@ -744,6 +757,10 @@ class Backend(QObject):
     @Property(bool, notify=ledAvailabilityChanged)
     def ledsAvailable(self):
         return led_available
+
+    @Property(str, notify=dashboardLightColorChanged)
+    def dashboardLightColor(self):
+        return settings.value("dashboardLightColor", "#ffc400", type=str)
 
     @Property(int, notify=ledAnimationModeChanged)
     def dashboardLightAnimationMode(self):
@@ -761,19 +778,33 @@ class Backend(QObject):
 
     @Slot(bool)
     def setLedStartupAnimation(self, active):
-        active = bool(active)
-        if active == self._led_animation_active:
-            return
+        self._set_led_animation_source("startup", active)
 
-        self._led_animation_active = active
-        if active and led_available:
+    @Slot(bool)
+    def setLedAnimationPreview(self, active):
+        self._set_led_animation_source("preview", active)
+
+    def _set_led_animation_source(self, source, active):
+        active = bool(active)
+        if source == "startup":
+            self._led_startup_animation_active = active
+        else:
+            self._led_preview_active = active
+
+        was_active = self._led_animation_active
+        self._led_animation_active = (
+            self._led_startup_animation_active or self._led_preview_active
+        )
+
+        if self._led_animation_active and not was_active and led_available:
             self._led_animation_phase = 0.0
             self._update_led_animation()
             if led_available:
                 self._led_animation_timer.start(100)
-        else:
+        elif was_active and not self._led_animation_active:
             self._led_animation_timer.stop()
             set_led_color(settings.value("dashboardLightColor", "#ffc400", type=str))
+
         if not led_available:
             self.ledAvailabilityChanged.emit()
 

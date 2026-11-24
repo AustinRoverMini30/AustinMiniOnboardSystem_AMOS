@@ -7,69 +7,44 @@ Item {
     id: dashboardLightAnimation
 
     property color primaryColor: "#2d5fff"
+    property color haloColor: backend.dashboardLightColor
     property int ledBrightness: 80
     property int animationMode: backend.dashboardLightAnimationMode
     property real colorCyclePhase: 0
+    property bool previewActive: visible && SwipeView.isCurrentItem
     property var animationOptions: [
-        { label: "Arc-en-ciel", mode: 0 },
-        { label: "Dégradé", mode: 1 },
-        { label: "Respiration", mode: 2 }
+        { label: "Gauche → droite", mode: 0 },
+        { label: "Centre → extrémités", mode: 1 },
+        { label: "Extrémités → centre", mode: 2 }
     ]
 
-    function animationColor(mode, position, phase) {
-        let hue
-        let value = 1.0
-        if (mode === 0) {
-            hue = (phase + position) % 1
-        } else if (mode === 1) {
-            hue = (phase * 0.35 + position * 0.55) % 1
-        } else {
-            hue = (0.08 + position * 0.72) % 1
-            value = 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(phase * 2 * Math.PI))
-        }
+    function firstLightPosition(mode, phase) {
+        if (mode === 0)
+            return phase
+        const distanceFromCenter = mode === 1 ? phase / 2 : (1 - phase) / 2
+        return 0.5 - distanceFromCenter
+    }
 
-        const saturation = 0.9
-        const sector = hue * 6
-        const chroma = value * saturation
-        const secondary = chroma * (1 - Math.abs(sector % 2 - 1))
-        const offset = value - chroma
-        let red = 0
-        let green = 0
-        let blue = 0
-
-        if (sector < 1) {
-            red = chroma
-            green = secondary
-        } else if (sector < 2) {
-            red = secondary
-            green = chroma
-        } else if (sector < 3) {
-            green = chroma
-            blue = secondary
-        } else if (sector < 4) {
-            green = secondary
-            blue = chroma
-        } else if (sector < 5) {
-            red = secondary
-            blue = chroma
-        } else {
-            red = chroma
-            blue = secondary
-        }
-
-        return Qt.rgba(red + offset, green + offset, blue + offset, 1)
+    function secondLightPosition(mode, phase) {
+        if (mode === 0)
+            return phase
+        const distanceFromCenter = mode === 1 ? phase / 2 : (1 - phase) / 2
+        return 0.5 + distanceFromCenter
     }
 
     Component.onCompleted: {
         backend.setDashboardLightBrightness(ledBrightness)
+        backend.setLedAnimationPreview(previewActive)
     }
+
+    onPreviewActiveChanged: backend.setLedAnimationPreview(previewActive)
 
     NumberAnimation on colorCyclePhase {
         from: 0
         to: 1
         duration: 5000
         loops: Animation.Infinite
-        running: dashboardLightAnimation.visible
+        running: dashboardLightAnimation.previewActive
     }
 
     Image {
@@ -108,60 +83,7 @@ Item {
             visible: false
             layer.enabled: true
 
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop {
-                    position: 0.0
-                    color: Qt.rgba(
-                        dashboardLightAnimation.animationColor(
-                            dashboardLightAnimation.animationMode, 0.0,
-                            dashboardLightAnimation.colorCyclePhase
-                        ).r,
-                        dashboardLightAnimation.animationColor(
-                            dashboardLightAnimation.animationMode, 0.0,
-                            dashboardLightAnimation.colorCyclePhase
-                        ).g,
-                        dashboardLightAnimation.animationColor(
-                            dashboardLightAnimation.animationMode, 0.0,
-                            dashboardLightAnimation.colorCyclePhase
-                        ).b, 0.34
-                    )
-                }
-                GradientStop {
-                    position: 0.5
-                    color: Qt.rgba(
-                        dashboardLightAnimation.animationColor(
-                            dashboardLightAnimation.animationMode, 0.5,
-                            dashboardLightAnimation.colorCyclePhase
-                        ).r,
-                        dashboardLightAnimation.animationColor(
-                            dashboardLightAnimation.animationMode, 0.5,
-                            dashboardLightAnimation.colorCyclePhase
-                        ).g,
-                        dashboardLightAnimation.animationColor(
-                            dashboardLightAnimation.animationMode, 0.5,
-                            dashboardLightAnimation.colorCyclePhase
-                        ).b, 0.34
-                    )
-                }
-                GradientStop {
-                    position: 1.0
-                    color: Qt.rgba(
-                        dashboardLightAnimation.animationColor(
-                            dashboardLightAnimation.animationMode, 1.0,
-                            dashboardLightAnimation.colorCyclePhase
-                        ).r,
-                        dashboardLightAnimation.animationColor(
-                            dashboardLightAnimation.animationMode, 1.0,
-                            dashboardLightAnimation.colorCyclePhase
-                        ).g,
-                        dashboardLightAnimation.animationColor(
-                            dashboardLightAnimation.animationMode, 1.0,
-                            dashboardLightAnimation.colorCyclePhase
-                        ).b, 0.34
-                    )
-                }
-            }
+            color: Qt.rgba(haloColor.r, haloColor.g, haloColor.b, 0.12)
         }
 
         MultiEffect {
@@ -184,60 +106,7 @@ Item {
             visible: false
             layer.enabled: true
 
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop {
-                    position: 0.0
-                    color: Qt.rgba(
-                        dashboardLightAnimation.animationColor(
-                            dashboardLightAnimation.animationMode, 0.0,
-                            dashboardLightAnimation.colorCyclePhase
-                        ).r,
-                        dashboardLightAnimation.animationColor(
-                            dashboardLightAnimation.animationMode, 0.0,
-                            dashboardLightAnimation.colorCyclePhase
-                        ).g,
-                        dashboardLightAnimation.animationColor(
-                            dashboardLightAnimation.animationMode, 0.0,
-                            dashboardLightAnimation.colorCyclePhase
-                        ).b, 0.58
-                    )
-                }
-                GradientStop {
-                    position: 0.5
-                    color: Qt.rgba(
-                        dashboardLightAnimation.animationColor(
-                            dashboardLightAnimation.animationMode, 0.5,
-                            dashboardLightAnimation.colorCyclePhase
-                        ).r,
-                        dashboardLightAnimation.animationColor(
-                            dashboardLightAnimation.animationMode, 0.5,
-                            dashboardLightAnimation.colorCyclePhase
-                        ).g,
-                        dashboardLightAnimation.animationColor(
-                            dashboardLightAnimation.animationMode, 0.5,
-                            dashboardLightAnimation.colorCyclePhase
-                        ).b, 0.58
-                    )
-                }
-                GradientStop {
-                    position: 1.0
-                    color: Qt.rgba(
-                        dashboardLightAnimation.animationColor(
-                            dashboardLightAnimation.animationMode, 1.0,
-                            dashboardLightAnimation.colorCyclePhase
-                        ).r,
-                        dashboardLightAnimation.animationColor(
-                            dashboardLightAnimation.animationMode, 1.0,
-                            dashboardLightAnimation.colorCyclePhase
-                        ).g,
-                        dashboardLightAnimation.animationColor(
-                            dashboardLightAnimation.animationMode, 1.0,
-                            dashboardLightAnimation.colorCyclePhase
-                        ).b, 0.58
-                    )
-                }
-            }
+            color: Qt.rgba(haloColor.r, haloColor.g, haloColor.b, 0.2)
         }
 
         MultiEffect {
@@ -247,6 +116,57 @@ Item {
             blurEnabled: true
             blurMax: 100
             blur: 10 / 32
+        }
+
+        Rectangle {
+            id: glowSpotLeftSource
+            x: lampRectangle.x
+               + dashboardLightAnimation.firstLightPosition(
+                     dashboardLightAnimation.animationMode,
+                     dashboardLightAnimation.colorCyclePhase
+                 ) * (lampRectangle.width - width)
+            y: lampRectangle.y - 4
+            width: lampRectangle.width * 0.12
+            height: lampRectangle.height + 26
+            radius: height / 2
+            color: Qt.rgba(haloColor.r, haloColor.g, haloColor.b, 0.85)
+            visible: false
+            layer.enabled: true
+        }
+
+        MultiEffect {
+            anchors.fill: glowSpotLeftSource
+            source: glowSpotLeftSource
+            autoPaddingEnabled: true
+            blurEnabled: true
+            blurMax: 100
+            blur: 18 / 32
+        }
+
+        Rectangle {
+            id: glowSpotRightSource
+            x: lampRectangle.x
+               + dashboardLightAnimation.secondLightPosition(
+                     dashboardLightAnimation.animationMode,
+                     dashboardLightAnimation.colorCyclePhase
+                 ) * (lampRectangle.width - width)
+            y: lampRectangle.y - 4
+            width: lampRectangle.width * 0.12
+            height: lampRectangle.height + 26
+            radius: height / 2
+            color: Qt.rgba(haloColor.r, haloColor.g, haloColor.b, 0.85)
+            visible: dashboardLightAnimation.animationMode !== 0
+            layer.enabled: true
+        }
+
+        MultiEffect {
+            anchors.fill: glowSpotRightSource
+            source: glowSpotRightSource
+            visible: dashboardLightAnimation.animationMode !== 0
+            autoPaddingEnabled: true
+            blurEnabled: true
+            blurMax: 100
+            blur: 18 / 32
         }
     }
 
@@ -288,24 +208,10 @@ Item {
 
                     background: Rectangle {
                         radius: 8
+                        color: "#252a31"
                         border.width: dashboardLightAnimation.animationMode === animationButton.modelData.mode ? 2 : 1
                         border.color: dashboardLightAnimation.animationMode === animationButton.modelData.mode
-                                      ? "#ffffff" : "#59616c"
-                        gradient: Gradient {
-                            orientation: Gradient.Horizontal
-                            GradientStop {
-                                position: 0
-                                color: dashboardLightAnimation.animationColor(
-                                           animationButton.modelData.mode, 0,
-                                           dashboardLightAnimation.colorCyclePhase)
-                            }
-                            GradientStop {
-                                position: 1
-                                color: dashboardLightAnimation.animationColor(
-                                           animationButton.modelData.mode, 1,
-                                           dashboardLightAnimation.colorCyclePhase)
-                            }
-                        }
+                                      ? dashboardLightAnimation.haloColor : "#59616c"
                     }
 
                     contentItem: Text {
@@ -315,8 +221,6 @@ Item {
                         font.weight: Font.DemiBold
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
-                        style: Text.Outline
-                        styleColor: "#80000000"
                     }
                 }
             }

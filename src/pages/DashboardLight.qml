@@ -7,7 +7,7 @@ Item {
     id: dashboardLightPage
 
     property color primaryColor: "#2d5fff"
-    property color haloColor: "#ffc400"
+    property color haloColor: backend.dashboardLightColor
     property int ledBrightness: 80
     property var haloColorOptions: [
         "#2d5fff", "#00b4ff", "#00c853", "#76d600",
