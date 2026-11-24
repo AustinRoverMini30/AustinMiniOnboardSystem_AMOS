@@ -14,7 +14,11 @@ ANIMATION_MODES = (
     GAUGE_FILL,
 )
 SWEEP_OVERRUN = 0.2
-GAUGE_FILL_CYCLES = 5
+GAUGE_FILL_BEAM_WIDTH = 1 / 14
+GAUGE_FILL_CYCLES = round(1 / GAUGE_FILL_BEAM_WIDTH)
+GAUGE_FILL_BEAM_SIGMA = GAUGE_FILL_BEAM_WIDTH / 1.75
+GAUGE_FILL_DURATION_MS = 6000
+GAUGE_FILL_TIMER_INTERVAL_MS = 25
 
 
 def _light_distance(mode, position, phase):
@@ -77,7 +81,11 @@ def build_animation_frame(mode, phase, led_count, base_color):
                 filled_from_right = _smooth_step(
                     fill_boundary - 0.015, fill_boundary + 0.015, position
                 )
-            beam = math.exp(-((position - sweep_progress) / 0.045) ** 2 * 3)
+            beam = math.exp(
+                -((position - sweep_progress) / GAUGE_FILL_BEAM_SIGMA) ** 2 * 3
+            )
+            if phase >= 1:
+                beam = 0.0
             intensity = max(filled_from_right, 0.88 * beam)
         else:
             distance = _light_distance(mode, position, phase)

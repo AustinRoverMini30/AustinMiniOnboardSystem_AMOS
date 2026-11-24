@@ -12,6 +12,9 @@ Item {
     property int animationMode: backend.dashboardLightAnimationMode
     property real colorCyclePhase: 0
     property bool previewActive: visible && SwipeView.isCurrentItem
+    readonly property int gaugeFillCycleCount: 14
+    readonly property int gaugeFillDurationMs: 6000
+    readonly property real gaugeFillBeamWidth: 1 / gaugeFillCycleCount
     property var animationOptions: [
         { label: "→", mode: 0 },
         { label: "←→", mode: 1 },
@@ -55,7 +58,7 @@ Item {
     }
 
     function gaugeFillState(phase) {
-        const cycleCount = 5
+        const cycleCount = dashboardLightAnimation.gaugeFillCycleCount
         const totalProgress = Math.max(0, Math.min(1, phase)) * cycleCount
         const completedCycles = Math.min(cycleCount, Math.floor(totalProgress + 1e-9))
         return {
@@ -104,7 +107,9 @@ Item {
         property: "colorCyclePhase"
         from: 0
         to: 1
-        duration: 5000
+        duration: dashboardLightAnimation.animationMode === 4
+                  ? dashboardLightAnimation.gaugeFillDurationMs
+                  : 5000
         running: dashboardLightAnimation.previewActive
                  && dashboardLightAnimation.animationMode >= 3
     }
@@ -211,7 +216,8 @@ Item {
             width: lampRectangle.width
                    * dashboardLightAnimation.gaugeFillState(
                        dashboardLightAnimation.colorCyclePhase
-                   ).completedCycles / 5
+                   ).completedCycles
+                   * dashboardLightAnimation.gaugeFillBeamWidth
             height: lampRectangle.height + 26
             radius: height / 2
             color: haloColor
@@ -231,14 +237,21 @@ Item {
 
         Rectangle {
             id: glowSpotLeftSource
-            x: lampRectangle.x
-               + dashboardLightAnimation.firstLightPosition(
+            x: dashboardLightAnimation.animationMode === 4
+               ? lampRectangle.x
+                 + dashboardLightAnimation.firstLightPosition(
+                     dashboardLightAnimation.animationMode,
+                     dashboardLightAnimation.colorCyclePhase
+                 ) * lampRectangle.width - width / 2
+               : lampRectangle.x
+                 + dashboardLightAnimation.firstLightPosition(
                      dashboardLightAnimation.animationMode,
                      dashboardLightAnimation.colorCyclePhase
                  ) * (lampRectangle.width - width)
             y: lampRectangle.y - 4
             width: lampRectangle.width
-                   * (dashboardLightAnimation.animationMode === 4 ? 0.08 : 0.12)
+                   * (dashboardLightAnimation.animationMode === 4
+                      ? dashboardLightAnimation.gaugeFillBeamWidth : 0.12)
             height: lampRectangle.height + 26
             radius: height / 2
             color: Qt.rgba(haloColor.r, haloColor.g, haloColor.b, 0.85)

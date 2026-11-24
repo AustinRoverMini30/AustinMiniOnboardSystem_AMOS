@@ -43,7 +43,13 @@ from UpdateUtility import (
     restart_application,
 )
 from KilometerManager import calculate_consumption_stats, load_entries, save_entry
-from LedAnimations import ANIMATION_MODES, build_animation_frame
+from LedAnimations import (
+    ANIMATION_MODES,
+    GAUGE_FILL,
+    GAUGE_FILL_DURATION_MS,
+    GAUGE_FILL_TIMER_INTERVAL_MS,
+    build_animation_frame,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -276,7 +282,15 @@ class Backend(QObject):
             return
         if not self._led_animation_active:
             return
-        if self._led_animation_mode in (3, 4):
+        if self._led_animation_mode == GAUGE_FILL:
+            frame_count = GAUGE_FILL_DURATION_MS // GAUGE_FILL_TIMER_INTERVAL_MS
+            self._led_animation_phase = min(
+                1.0,
+                round(
+                    (self._led_animation_phase + 1 / frame_count) * frame_count
+                ) / frame_count,
+            )
+        elif self._led_animation_mode == 3:
             self._led_animation_phase = min(1.0, self._led_animation_phase + 0.02)
         else:
             self._led_animation_phase = (self._led_animation_phase + 0.02) % 1.0
@@ -788,7 +802,9 @@ class Backend(QObject):
         self.ledAnimationModeChanged.emit()
         if self._led_animation_active:
             self._led_animation_phase = 0.0
-            self._led_animation_timer.start(100)
+            self._led_animation_timer.start(
+                GAUGE_FILL_TIMER_INTERVAL_MS if mode == GAUGE_FILL else 100
+            )
             self._update_led_animation()
 
     @Slot(bool)
@@ -822,7 +838,11 @@ class Backend(QObject):
             self._led_animation_phase = 0.0
             self._update_led_animation()
             if led_available:
-                self._led_animation_timer.start(100)
+                self._led_animation_timer.start(
+                    GAUGE_FILL_TIMER_INTERVAL_MS
+                    if self._led_animation_mode == GAUGE_FILL
+                    else 100
+                )
         elif was_active and not self._led_animation_active:
             self._led_animation_timer.stop()
             self._apply_led_brightness(self._led_brightness)
