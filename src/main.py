@@ -181,6 +181,7 @@ class Backend(QObject):
     ledAvailabilityChanged = Signal()
     ledAnimationModeChanged = Signal()
     dashboardLightColorChanged = Signal()
+    dashboardLightBrightnessChanged = Signal()
 
     def __init__(self):
         super().__init__()
@@ -219,6 +220,12 @@ class Backend(QObject):
             self._led_animation_mode = 0
         if self._led_animation_mode not in (0, 1, 2):
             self._led_animation_mode = 0
+        self._led_brightness = settings.value(
+            "dashboardLightBrightness", LED_BRIGHTNESS, type=int
+        )
+        self._led_brightness = max(0, min(255, self._led_brightness))
+        self._led_preview_brightness = self._led_brightness
+        set_led_brightness(self._led_brightness)
         self._load_journal()
 
         self.updateCheckResult.connect(self._handle_update_check)
@@ -762,6 +769,10 @@ class Backend(QObject):
     def dashboardLightColor(self):
         return settings.value("dashboardLightColor", "#ffc400", type=str)
 
+    @Property(int, notify=dashboardLightBrightnessChanged)
+    def dashboardLightBrightness(self):
+        return self._led_brightness
+
     @Property(int, notify=ledAnimationModeChanged)
     def dashboardLightAnimationMode(self):
         return self._led_animation_mode
@@ -797,19 +808,47 @@ class Backend(QObject):
         )
 
         if self._led_animation_active and not was_active and led_available:
+            brightness = (
+                self._led_preview_brightness
+                if self._led_preview_active
+                else self._led_brightness
+            )
+            self._apply_led_brightness(brightness)
             self._led_animation_phase = 0.0
             self._update_led_animation()
             if led_available:
                 self._led_animation_timer.start(100)
         elif was_active and not self._led_animation_active:
             self._led_animation_timer.stop()
+            self._apply_led_brightness(self._led_brightness)
             set_led_color(settings.value("dashboardLightColor", "#ffc400", type=str))
-
-        if not led_available:
-            self.ledAvailabilityChanged.emit()
+        elif self._led_animation_active:
+            brightness = (
+                self._led_preview_brightness
+                if self._led_preview_active
+                else self._led_brightness
+            )
+            self._apply_led_brightness(brightness)
 
     @Slot(int)
     def setDashboardLightBrightness(self, brightness):
+        brightness = max(0, min(255, int(brightness)))
+        if brightness == self._led_brightness:
+            return
+        self._led_brightness = brightness
+        settings.setValue("dashboardLightBrightness", brightness)
+        settings.sync()
+        self.dashboardLightBrightnessChanged.emit()
+        if not self._led_animation_active:
+            self._apply_led_brightness(brightness)
+
+    @Slot(int)
+    def setDashboardLightPreviewBrightness(self, brightness):
+        self._led_preview_brightness = max(0, min(255, int(brightness)))
+        if self._led_preview_active:
+            self._apply_led_brightness(self._led_preview_brightness)
+
+    def _apply_led_brightness(self, brightness):
         was_available = led_available
         set_led_brightness(brightness)
         if was_available and not led_available:

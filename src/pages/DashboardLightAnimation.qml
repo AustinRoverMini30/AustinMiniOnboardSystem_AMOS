@@ -8,7 +8,7 @@ Item {
 
     property color primaryColor: "#2d5fff"
     property color haloColor: backend.dashboardLightColor
-    property int ledBrightness: 80
+    property int ledBrightness: backend.dashboardLightBrightness
     property int animationMode: backend.dashboardLightAnimationMode
     property real colorCyclePhase: 0
     property bool previewActive: visible && SwipeView.isCurrentItem
@@ -33,7 +33,7 @@ Item {
     }
 
     Component.onCompleted: {
-        backend.setDashboardLightBrightness(ledBrightness)
+        backend.setDashboardLightPreviewBrightness(ledBrightness)
         backend.setLedAnimationPreview(previewActive)
     }
 
@@ -244,17 +244,43 @@ Item {
             anchors.centerIn: parent
 
             Slider {
+                id: brightnessSlider
+                width: 64
                 anchors.horizontalCenter: parent.horizontalCenter
                 orientation: Qt.Vertical
-                height: 240
+                height: 320
                 from: 0
                 to: 255
                 stepSize: 1
                 value: dashboardLightAnimation.ledBrightness
                 enabled: backend.ledsAvailable
+                background: Rectangle {
+                    x: brightnessSlider.leftPadding
+                       + (brightnessSlider.availableWidth - width) / 2
+                    y: brightnessSlider.topPadding
+                    width: 3
+                    height: brightnessSlider.availableHeight
+                    radius: width / 2
+                    color: "#3a424d"
+                }
+                handle: Rectangle {
+                    x: brightnessSlider.leftPadding
+                       + (brightnessSlider.availableWidth - width) / 2
+                    y: brightnessSlider.topPadding
+                       + brightnessSlider.visualPosition
+                       * (brightnessSlider.availableHeight - height)
+                    width: 40
+                    height: 28
+                    radius: 8
+                    color: brightnessSlider.pressed ? "#ffffff" : dashboardLightAnimation.primaryColor
+                    border.width: 1
+                    border.color: "#ffffff"
+                }
                 onMoved: {
                     dashboardLightAnimation.ledBrightness = Math.round(value)
-                    backend.setDashboardLightBrightness(dashboardLightAnimation.ledBrightness)
+                    backend.setDashboardLightPreviewBrightness(
+                        dashboardLightAnimation.ledBrightness
+                    )
                 }
             }
         }
