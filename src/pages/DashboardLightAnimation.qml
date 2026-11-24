@@ -13,23 +13,52 @@ Item {
     property real colorCyclePhase: 0
     property bool previewActive: visible && SwipeView.isCurrentItem
     property var animationOptions: [
-        { label: "Gauche → droite", mode: 0 },
-        { label: "Centre → extrémités", mode: 1 },
-        { label: "Extrémités → centre", mode: 2 }
+        { label: "→", mode: 0 },
+        { label: "←→", mode: 1 },
+        { label: "→←", mode: 2 }
     ]
 
     function firstLightPosition(mode, phase) {
         if (mode === 0)
-            return phase
-        const distanceFromCenter = mode === 1 ? phase / 2 : (1 - phase) / 2
+            return -0.2 + phase * 1.4
+        const distanceFromCenter = Math.max(
+            0,
+            mode === 1 ? -0.2 + phase * 1.4 : 1.2 - phase * 1.4
+        )
         return 0.5 - distanceFromCenter
     }
 
     function secondLightPosition(mode, phase) {
         if (mode === 0)
-            return phase
-        const distanceFromCenter = mode === 1 ? phase / 2 : (1 - phase) / 2
+            return -0.2 + phase * 1.4
+        const distanceFromCenter = Math.max(
+            0,
+            mode === 1 ? -0.2 + phase * 1.4 : 1.2 - phase * 1.4
+        )
         return 0.5 + distanceFromCenter
+    }
+
+    function smoothStep(start, end, value) {
+        const t = Math.max(0, Math.min(1, (value - start) / (end - start)))
+        return t * t * (3 - 2 * t)
+    }
+
+    function lightOpacity(mode, phase) {
+        if (mode === 0) {
+            const position = -0.2 + phase * 1.4
+            return smoothStep(-0.2, 0, position)
+                   * (1 - smoothStep(1, 1.2, position))
+        }
+
+        const distanceFromCenter = mode === 1
+                                   ? -0.2 + phase * 1.4
+                                   : 1.2 - phase * 1.4
+        if (mode === 1) {
+            return smoothStep(-0.2, 0, distanceFromCenter)
+                   * (1 - smoothStep(1, 1.2, distanceFromCenter))
+        }
+        return smoothStep(1.2, 1, distanceFromCenter)
+               * (1 - smoothStep(0, -0.2, distanceFromCenter))
     }
 
     Component.onCompleted: {
@@ -137,6 +166,10 @@ Item {
         MultiEffect {
             anchors.fill: glowSpotLeftSource
             source: glowSpotLeftSource
+            opacity: dashboardLightAnimation.lightOpacity(
+                         dashboardLightAnimation.animationMode,
+                         dashboardLightAnimation.colorCyclePhase
+                     )
             autoPaddingEnabled: true
             blurEnabled: true
             blurMax: 100
@@ -163,6 +196,10 @@ Item {
             anchors.fill: glowSpotRightSource
             source: glowSpotRightSource
             visible: dashboardLightAnimation.animationMode !== 0
+            opacity: dashboardLightAnimation.lightOpacity(
+                         dashboardLightAnimation.animationMode,
+                         dashboardLightAnimation.colorCyclePhase
+                     )
             autoPaddingEnabled: true
             blurEnabled: true
             blurMax: 100

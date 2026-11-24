@@ -43,6 +43,7 @@ from UpdateUtility import (
     restart_application,
 )
 from KilometerManager import calculate_consumption_stats, load_entries, save_entry
+from LedAnimations import ANIMATION_MODES, build_animation_frame
 
 logger = logging.getLogger(__name__)
 
@@ -140,24 +141,14 @@ def set_led_animation(mode, phase):
             logger.error("Couleur mémorisée des LED invalide.")
             return
 
-        for index in range(LED_COUNT):
-            position = index / max(LED_COUNT - 1, 1)
-            if mode == 0:
-                distance = abs(position - phase)
-            elif mode == 1:
-                distance = abs(abs(position - 0.5) * 2 - phase)
-            else:
-                distance = abs(abs(position - 0.5) * 2 - (1 - phase))
-
-            intensity = 0.0 + 0.88 * math.exp(-((distance / 0.12) ** 2) * 3)
-            strip.setPixelColor(
-                index,
-                Color(
-                    round(base_color.red() * intensity),
-                    round(base_color.green() * intensity),
-                    round(base_color.blue() * intensity),
-                ),
-            )
+        frame = build_animation_frame(
+            mode,
+            phase,
+            LED_COUNT,
+            (base_color.red(), base_color.green(), base_color.blue()),
+        )
+        for index, rgb in enumerate(frame):
+            strip.setPixelColor(index, Color(*rgb))
         strip.show()
     except Exception:
         led_available = False
@@ -221,7 +212,7 @@ class Backend(QObject):
             )
         except (TypeError, ValueError):
             self._led_animation_mode = 0
-        if self._led_animation_mode not in (0, 1, 2):
+        if self._led_animation_mode not in ANIMATION_MODES:
             self._led_animation_mode = 0
         self._led_brightness = settings.value(
             "dashboardLightBrightness", LED_BRIGHTNESS, type=int
@@ -784,7 +775,7 @@ class Backend(QObject):
     @Slot(int)
     def setDashboardLightAnimation(self, mode):
         mode = int(mode)
-        if mode not in (0, 1, 2) or mode == self._led_animation_mode:
+        if mode not in ANIMATION_MODES or mode == self._led_animation_mode:
             return
         self._led_animation_mode = mode
         settings.setValue("dashboardLightAnimationMode", mode)
