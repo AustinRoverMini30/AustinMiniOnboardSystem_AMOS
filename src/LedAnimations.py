@@ -6,12 +6,14 @@ CENTER_TO_EDGES = 1
 EDGES_TO_CENTER = 2
 FUTURISTIC_FLASH = 3
 GAUGE_FILL = 4
+EDGES_TO_CENTER_FILL = 5
 ANIMATION_MODES = (
     LEFT_TO_RIGHT,
     CENTER_TO_EDGES,
     EDGES_TO_CENTER,
     FUTURISTIC_FLASH,
     GAUGE_FILL,
+    EDGES_TO_CENTER_FILL,
 )
 SWEEP_OVERRUN = 0.2
 GAUGE_FILL_BEAM_WIDTH = 1 / 14
@@ -87,6 +89,24 @@ def build_animation_frame(mode, phase, led_count, base_color):
             if phase >= 1:
                 beam = 0.0
             intensity = max(filled_from_right, 0.88 * beam)
+        elif mode == EDGES_TO_CENTER_FILL:
+            if phase < 0.5:
+                convergence = phase * 2
+                distance = abs(abs(position - 0.5) * 2 - (1 - convergence))
+                intensity = 0.88 * math.exp(-((distance / 0.12) ** 2) * 3)
+            elif phase >= 1:
+                intensity = 1.0
+            else:
+                fill_progress = (phase - 0.5) * 2
+                fill_radius = fill_progress / 2
+                distance_from_center = abs(position - 0.5)
+                filled = 1 - _smooth_step(
+                    fill_radius - 0.015, fill_radius + 0.015, distance_from_center
+                )
+                beam = math.exp(
+                    -((distance_from_center - fill_radius) / 0.025) ** 2 * 3
+                )
+                intensity = max(filled, 0.88 * beam)
         else:
             distance = _light_distance(mode, position, phase)
             intensity = 0.88 * math.exp(-((distance / 0.12) ** 2) * 3)

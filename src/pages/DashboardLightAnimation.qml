@@ -14,13 +14,15 @@ Item {
     property bool previewActive: visible && SwipeView.isCurrentItem
     readonly property int gaugeFillCycleCount: 14
     readonly property int gaugeFillDurationMs: 6000
+    readonly property int edgesToCenterFillDurationMs: 6000
     readonly property real gaugeFillBeamWidth: 1 / gaugeFillCycleCount
     property var animationOptions: [
         { label: "→", mode: 0 },
         { label: "←→", mode: 1 },
         { label: "→←", mode: 2 },
         { label: "Futuriste", mode: 3 },
-        { label: "Remplissage", mode: 4 }
+        { label: "Remplissage", mode: 4 },
+        { label: "Ext.-centre +", mode: 5 }
     ]
     readonly property real futuristicProgress: Math.pow(colorCyclePhase, 3)
     readonly property real futuristicFlashOpacity: colorCyclePhase >= 1
@@ -35,6 +37,10 @@ Item {
             return -0.2 + phase * 1.4
         if (mode === 4)
             return gaugeFillState(phase).sweepProgress
+        if (mode === 5) {
+            const fillProgress = Math.max(0, (phase - 0.5) * 2)
+            return phase < 0.5 ? phase : 0.5 - fillProgress / 2
+        }
         const distanceFromCenter = Math.max(
             0,
             mode === 1 ? -0.2 + phase * 1.4 : 1.2 - phase * 1.4
@@ -45,6 +51,10 @@ Item {
     function secondLightPosition(mode, phase) {
         if (mode === 0)
             return -0.2 + phase * 1.4
+        if (mode === 5) {
+            const fillProgress = Math.max(0, (phase - 0.5) * 2)
+            return phase < 0.5 ? 1 - phase : 0.5 + fillProgress / 2
+        }
         const distanceFromCenter = Math.max(
             0,
             mode === 1 ? -0.2 + phase * 1.4 : 1.2 - phase * 1.4
@@ -68,6 +78,9 @@ Item {
     }
 
     function lightOpacity(mode, phase) {
+        if (mode === 5)
+            return phase >= 0.5 ? 1 - smoothStep(0.98, 1, phase) : 1
+
         if (mode === 0 || mode === 4) {
             const position = firstLightPosition(mode, phase)
             return smoothStep(-0.2, 0, position)
@@ -109,7 +122,9 @@ Item {
         to: 1
         duration: dashboardLightAnimation.animationMode === 4
                   ? dashboardLightAnimation.gaugeFillDurationMs
-                  : 5000
+                  : dashboardLightAnimation.animationMode === 5
+                    ? dashboardLightAnimation.edgesToCenterFillDurationMs
+                    : 5000
         running: dashboardLightAnimation.previewActive
                  && dashboardLightAnimation.animationMode >= 3
     }
@@ -236,8 +251,36 @@ Item {
         }
 
         Rectangle {
+            id: centerFillSource
+            anchors.horizontalCenter: lampRectangle.horizontalCenter
+            y: lampRectangle.y - 4
+            width: lampRectangle.width
+                   * Math.max(
+                       0,
+                       Math.min(1, (dashboardLightAnimation.colorCyclePhase - 0.5) * 2)
+                   )
+            height: lampRectangle.height + 26
+            radius: height / 2
+            color: haloColor
+            visible: false
+            layer.enabled: true
+        }
+
+        MultiEffect {
+            anchors.fill: centerFillSource
+            source: centerFillSource
+            visible: dashboardLightAnimation.animationMode === 5
+                     && dashboardLightAnimation.colorCyclePhase > 0.5
+            autoPaddingEnabled: true
+            blurEnabled: true
+            blurMax: 100
+            blur: 12 / 32
+        }
+
+        Rectangle {
             id: glowSpotLeftSource
             x: dashboardLightAnimation.animationMode === 4
+               || dashboardLightAnimation.animationMode === 5
                ? lampRectangle.x
                  + dashboardLightAnimation.firstLightPosition(
                      dashboardLightAnimation.animationMode,
@@ -251,7 +294,10 @@ Item {
             y: lampRectangle.y - 4
             width: lampRectangle.width
                    * (dashboardLightAnimation.animationMode === 4
-                      ? dashboardLightAnimation.gaugeFillBeamWidth : 0.12)
+                      ? dashboardLightAnimation.gaugeFillBeamWidth
+                      : dashboardLightAnimation.animationMode === 5
+                        && dashboardLightAnimation.colorCyclePhase >= 0.5
+                        ? 0.04 : 0.12)
             height: lampRectangle.height + 26
             radius: height / 2
             color: Qt.rgba(haloColor.r, haloColor.g, haloColor.b, 0.85)
@@ -275,13 +321,22 @@ Item {
 
         Rectangle {
             id: glowSpotRightSource
-            x: lampRectangle.x
-               + dashboardLightAnimation.secondLightPosition(
+            x: dashboardLightAnimation.animationMode === 5
+               ? lampRectangle.x
+                 + dashboardLightAnimation.secondLightPosition(
+                     dashboardLightAnimation.animationMode,
+                     dashboardLightAnimation.colorCyclePhase
+                 ) * lampRectangle.width - width / 2
+               : lampRectangle.x
+                 + dashboardLightAnimation.secondLightPosition(
                      dashboardLightAnimation.animationMode,
                      dashboardLightAnimation.colorCyclePhase
                  ) * (lampRectangle.width - width)
             y: lampRectangle.y - 4
-            width: lampRectangle.width * 0.12
+            width: lampRectangle.width
+                   * (dashboardLightAnimation.animationMode === 5
+                      && dashboardLightAnimation.colorCyclePhase >= 0.5
+                      ? 0.04 : 0.12)
             height: lampRectangle.height + 26
             radius: height / 2
             color: Qt.rgba(haloColor.r, haloColor.g, haloColor.b, 0.85)

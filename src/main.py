@@ -45,6 +45,7 @@ from UpdateUtility import (
 from KilometerManager import calculate_consumption_stats, load_entries, save_entry
 from LedAnimations import (
     ANIMATION_MODES,
+    EDGES_TO_CENTER_FILL,
     GAUGE_FILL,
     GAUGE_FILL_DURATION_MS,
     GAUGE_FILL_TIMER_INTERVAL_MS,
@@ -282,7 +283,7 @@ class Backend(QObject):
             return
         if not self._led_animation_active:
             return
-        if self._led_animation_mode == GAUGE_FILL:
+        if self._led_animation_mode in (GAUGE_FILL, EDGES_TO_CENTER_FILL):
             frame_count = GAUGE_FILL_DURATION_MS // GAUGE_FILL_TIMER_INTERVAL_MS
             self._led_animation_phase = min(
                 1.0,
@@ -296,7 +297,11 @@ class Backend(QObject):
             self._led_animation_phase = (self._led_animation_phase + 0.02) % 1.0
         was_available = led_available
         set_led_animation(self._led_animation_mode, self._led_animation_phase)
-        if self._led_animation_mode in (3, 4) and self._led_animation_phase >= 1:
+        if self._led_animation_mode in (
+            3,
+            GAUGE_FILL,
+            EDGES_TO_CENTER_FILL,
+        ) and self._led_animation_phase >= 1:
             self._led_animation_timer.stop()
         if was_available and not led_available:
             self.ledAvailabilityChanged.emit()
@@ -803,7 +808,9 @@ class Backend(QObject):
         if self._led_animation_active:
             self._led_animation_phase = 0.0
             self._led_animation_timer.start(
-                GAUGE_FILL_TIMER_INTERVAL_MS if mode == GAUGE_FILL else 100
+                GAUGE_FILL_TIMER_INTERVAL_MS
+                if mode in (GAUGE_FILL, EDGES_TO_CENTER_FILL)
+                else 100
             )
             self._update_led_animation()
 
@@ -840,7 +847,7 @@ class Backend(QObject):
             if led_available:
                 self._led_animation_timer.start(
                     GAUGE_FILL_TIMER_INTERVAL_MS
-                    if self._led_animation_mode == GAUGE_FILL
+                    if self._led_animation_mode in (GAUGE_FILL, EDGES_TO_CENTER_FILL)
                     else 100
                 )
         elif was_active and not self._led_animation_active:
