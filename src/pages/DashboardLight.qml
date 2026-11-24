@@ -6,7 +6,7 @@ import "../components"
 Item {
     id: dashboardLightPage
 
-    property color primaryColor: "#2d5fff"
+    property color primaryColor: backend.dashboardLightColor
     property color haloColor: backend.dashboardLightColor
     property int ledBrightness: backend.dashboardLightBrightness
     property var haloColorOptions: [
@@ -203,7 +203,7 @@ Item {
                     width: 40
                     height: 28
                     radius: 8
-                    color: brightnessSlider.pressed ? "#ffffff" : dashboardLightPage.primaryColor
+                    color: brightnessSlider.pressed ? "#ffffff" : dashboardLightPage.haloColor
                     border.width: 1
                     border.color: "#ffffff"
                 }
