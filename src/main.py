@@ -1,3 +1,4 @@
+import colorsys
 import hashlib
 import logging
 import math
@@ -126,6 +127,36 @@ def set_led_brightness(brightness):
         logger.exception("Échec lors du réglage de la luminosité des LED.")
 
 
+def set_led_animation(mode, phase):
+    global led_available
+    if not led_available:
+        return
+
+    try:
+        value = 1.0
+        if mode == 2:
+            value = 0.55 + 0.45 * (0.5 + 0.5 * math.sin(phase * 2 * math.pi))
+
+        for index in range(LED_COUNT):
+            position = index / max(LED_COUNT - 1, 1)
+            if mode == 0:
+                hue = (phase + position) % 1
+            elif mode == 1:
+                hue = (phase * 0.35 + position * 0.55) % 1
+            else:
+                hue = (0.08 + position * 0.72) % 1
+
+            red, green, blue = colorsys.hsv_to_rgb(hue, 0.9, value)
+            strip.setPixelColor(
+                index,
+                Color(round(red * 255), round(green * 255), round(blue * 255)),
+            )
+        strip.show()
+    except Exception:
+        led_available = False
+        logger.exception("Échec lors de l'animation des LED.")
+
+
 class Backend(QObject):
     cpuTempChanged = Signal()
     speedChanged = Signal()
@@ -144,6 +175,7 @@ class Backend(QObject):
     kioskAtStartupChanged = Signal()
     primaryColorChanged = Signal()
     ledAvailabilityChanged = Signal()
+    ledAnimationModeChanged = Signal()
 
     def __init__(self):
         super().__init__()
@@ -174,6 +206,14 @@ class Backend(QObject):
         self._bluetooth_connected_address = ""
         self._voltage = 0.0
         self._voltmeter_available = False
+        try:
+            self._led_animation_mode = settings.value(
+                "dashboardLightAnimationMode", 0, type=int
+            )
+        except (TypeError, ValueError):
+            self._led_animation_mode = 0
+        if self._led_animation_mode not in (0, 1, 2):
+            self._led_animation_mode = 0
         self._load_journal()
 
         self.updateCheckResult.connect(self._handle_update_check)
@@ -187,6 +227,11 @@ class Backend(QObject):
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._update)
         self._timer.start(300)
+
+        self._led_animation_phase = 0.0
+        self._led_animation_active = False
+        self._led_animation_timer = QTimer(self)
+        self._led_animation_timer.timeout.connect(self._update_led_animation)
 
         self._usb_update_timer = QTimer(self)
         self._usb_update_timer.timeout.connect(self._check_usb_update)
@@ -215,6 +260,15 @@ class Backend(QObject):
         self.cpuTempChanged.emit()
         self.speedChanged.emit()
         self.gaugesChanged.emit()
+
+    def _update_led_animation(self):
+        if not self._led_animation_active or not led_available:
+            return
+        self._led_animation_phase = (self._led_animation_phase + 0.02) % 1.0
+        was_available = led_available
+        set_led_animation(self._led_animation_mode, self._led_animation_phase)
+        if was_available and not led_available:
+            self.ledAvailabilityChanged.emit()
 
     def _voltage_loop(self):
         """Lit l'INA226 en arrière-plan sans bloquer l'interface Qt."""
@@ -675,13 +729,53 @@ class Backend(QObject):
     @Slot(str)
     def setDashboardLightColor(self, color):
         was_available = led_available
-        set_led_color(color)
+        parsed_color = QColor(color)
+        if not parsed_color.isValid():
+            logger.error("Couleur de LED invalide : %s", color)
+            return
+        color = parsed_color.name()
+        settings.setValue("dashboardLightColor", color)
+        settings.sync()
+        if not self._led_animation_active:
+            set_led_color(color)
         if was_available and not led_available:
             self.ledAvailabilityChanged.emit()
 
     @Property(bool, notify=ledAvailabilityChanged)
     def ledsAvailable(self):
         return led_available
+
+    @Property(int, notify=ledAnimationModeChanged)
+    def dashboardLightAnimationMode(self):
+        return self._led_animation_mode
+
+    @Slot(int)
+    def setDashboardLightAnimation(self, mode):
+        mode = int(mode)
+        if mode not in (0, 1, 2) or mode == self._led_animation_mode:
+            return
+        self._led_animation_mode = mode
+        settings.setValue("dashboardLightAnimationMode", mode)
+        settings.sync()
+        self.ledAnimationModeChanged.emit()
+
+    @Slot(bool)
+    def setLedStartupAnimation(self, active):
+        active = bool(active)
+        if active == self._led_animation_active:
+            return
+
+        self._led_animation_active = active
+        if active and led_available:
+            self._led_animation_phase = 0.0
+            self._update_led_animation()
+            if led_available:
+                self._led_animation_timer.start(100)
+        else:
+            self._led_animation_timer.stop()
+            set_led_color(settings.value("dashboardLightColor", "#ffc400", type=str))
+        if not led_available:
+            self.ledAvailabilityChanged.emit()
 
     @Slot(int)
     def setDashboardLightBrightness(self, brightness):

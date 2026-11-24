@@ -45,6 +45,9 @@ ApplicationWindow {
         DashboardLight {
             primaryColor: root.primaryColor
         }
+        DashboardLightAnimation {
+            primaryColor: root.primaryColor
+        }
 
     }
 
@@ -209,6 +212,22 @@ ApplicationWindow {
         z: 100
         holdLastFrame: true
         fadeDuration: 500
+        property bool drivesLedStartupAnimation: false
+
+        onVisibleChanged: {
+            if (drivesLedStartupAnimation) {
+                backend.setLedStartupAnimation(visible)
+                if (!visible)
+                    drivesLedStartupAnimation = false
+            }
+        }
+
+        onPlaybackFinished: {
+            if (drivesLedStartupAnimation) {
+                backend.setLedStartupAnimation(false)
+                drivesLedStartupAnimation = false
+            }
+        }
     }
 
     VideoOverlay {
@@ -216,11 +235,34 @@ ApplicationWindow {
         anchors.fill: parent
         z: 90
         timeout: 8000
+        property bool drivesLedStartupAnimation: false
+
+        onVisibleChanged: {
+            if (drivesLedStartupAnimation) {
+                backend.setLedStartupAnimation(visible)
+                if (!visible)
+                    drivesLedStartupAnimation = false
+            }
+        }
+
+        onPlaybackFinished: {
+            if (drivesLedStartupAnimation) {
+                backend.setLedStartupAnimation(false)
+                drivesLedStartupAnimation = false
+            }
+        }
+
         Component.onCompleted: {
-            if (backend.kioskAtStartup)
+            if (backend.bootVideoUrl.toString() === "") {
+                return
+            }
+            if (backend.kioskAtStartup) {
+                kioskOverlay.drivesLedStartupAnimation = true
                 kioskOverlay.start()
-            else
+            } else {
+                drivesLedStartupAnimation = true
                 start()
+            }
         }
     }
 }

@@ -3,6 +3,7 @@ import QtMultimedia
 
 Rectangle {
     id: overlay
+    signal playbackFinished()
     property bool holdLastFrame: false
     property int timeout: 0
     property int fadeDuration: 400
@@ -37,6 +38,7 @@ Rectangle {
         function freeze() {
             position = Math.max(0, duration - 100)
             pause()
+            overlay.playbackFinished()
         }
 
         onPositionChanged: {
@@ -46,11 +48,15 @@ Rectangle {
         onMediaStatusChanged: {
             if (mediaStatus === MediaPlayer.EndOfMedia) {
                 if (overlay.holdLastFrame) freeze()
-                else overlay.finish()
+                else {
+                    overlay.playbackFinished()
+                    overlay.finish()
+                }
             }
         }
         onErrorOccurred: (error, errorString) => {
             console.warn("Vidéo :", errorString)
+            overlay.playbackFinished()
             overlay.finish()
         }
     }
