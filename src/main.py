@@ -276,9 +276,14 @@ class Backend(QObject):
             return
         if not self._led_animation_active:
             return
-        self._led_animation_phase = (self._led_animation_phase + 0.02) % 1.0
+        if self._led_animation_mode in (3, 4):
+            self._led_animation_phase = min(1.0, self._led_animation_phase + 0.02)
+        else:
+            self._led_animation_phase = (self._led_animation_phase + 0.02) % 1.0
         was_available = led_available
         set_led_animation(self._led_animation_mode, self._led_animation_phase)
+        if self._led_animation_mode in (3, 4) and self._led_animation_phase >= 1:
+            self._led_animation_timer.stop()
         if was_available and not led_available:
             self.ledAvailabilityChanged.emit()
 
@@ -781,6 +786,10 @@ class Backend(QObject):
         settings.setValue("dashboardLightAnimationMode", mode)
         settings.sync()
         self.ledAnimationModeChanged.emit()
+        if self._led_animation_active:
+            self._led_animation_phase = 0.0
+            self._led_animation_timer.start(100)
+            self._update_led_animation()
 
     @Slot(bool)
     def setLedStartupAnimation(self, active):
