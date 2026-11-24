@@ -4,3 +4,4 @@ gpiozero
 pyside6
 smbus2
 mutagen
+rpi_ws281x

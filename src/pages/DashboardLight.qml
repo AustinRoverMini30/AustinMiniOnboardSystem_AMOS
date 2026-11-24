@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Effects
 import "../components"
 
@@ -7,11 +8,18 @@ Item {
 
     property color primaryColor: "#2d5fff"
     property color haloColor: "#ffc400"
+    property int ledBrightness: 80
     property var haloColorOptions: [
         "#2d5fff", "#00b4ff", "#00c853", "#76d600",
         "#ffc400", "#ff7a00", "#ff2d3d", "#ff2d95",
         "#b030ff", "#00a35c"
     ]
+
+    Component.onCompleted: {
+        backend.setDashboardLightColor(haloColor.toString())
+        backend.setDashboardLightBrightness(ledBrightness)
+    }
+    onHaloColorChanged: backend.setDashboardLightColor(haloColor.toString())
 
     Image {
         anchors.fill: parent
@@ -146,6 +154,39 @@ Item {
                             onTapped: dashboardLightPage.haloColor = colorOption.modelData
                         }
                     }
+                }
+            }
+        }
+    }
+
+    Rectangle {
+        anchors.right: parent.right
+        anchors.rightMargin: 16
+        anchors.verticalCenter: parent.verticalCenter
+        width: brightnessControl.implicitWidth + 20
+        height: brightnessControl.implicitHeight + 24
+        radius: 12
+        color: "#cc13181e"
+        border.width: 1
+        border.color: "#59616c"
+        z: 3
+
+        Column {
+            id: brightnessControl
+            anchors.centerIn: parent
+
+            Slider {
+                anchors.horizontalCenter: parent.horizontalCenter
+                orientation: Qt.Vertical
+                height: 240
+                from: 0
+                to: 255
+                stepSize: 1
+                value: dashboardLightPage.ledBrightness
+                enabled: backend.ledsAvailable
+                onMoved: {
+                    dashboardLightPage.ledBrightness = Math.round(value)
+                    backend.setDashboardLightBrightness(dashboardLightPage.ledBrightness)
                 }
             }
         }

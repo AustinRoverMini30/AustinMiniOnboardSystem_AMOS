@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import math
 import mimetypes
 import re
@@ -43,6 +44,8 @@ from UpdateUtility import (
 )
 from KilometerManager import calculate_consumption_stats, load_entries, save_entry
 
+logger = logging.getLogger(__name__)
+
 pc_dev = False
 FAN_PIN = 18
 
@@ -53,6 +56,13 @@ MUSIC_ART_DIR = Path(QStandardPaths.writableLocation(
     QStandardPaths.StandardLocation.GenericCacheLocation
 )) / "amos" / "album-art"
 settings = QSettings("AMOS", "AustinMiniOnboardSystem_AMOS")
+
+LED_COUNT = 30
+LED_PIN = 18
+LED_BRIGHTNESS = 80
+strip = None
+Color = None
+led_available = False
 
 try:
     fan = OutputDevice(FAN_PIN, active_high=False, initial_value=False)
@@ -66,6 +76,55 @@ if (pc_dev):
     bus= None
 else:
     bus = SMBus(1)
+
+    try:
+        from rpi_ws281x import PixelStrip, Color, ws
+
+        LED_COUNT = 144
+        LED_PIN = 12
+        LED_BRIGHTNESS = 80
+
+        strip = PixelStrip(LED_COUNT, LED_PIN, 800000, 10, False, LED_BRIGHTNESS, 0,
+                           ws.WS2811_STRIP_GRB)
+        strip.begin()
+        led_available = True
+    except Exception:
+        logger.exception("Initialisation de la bande LED impossible.")
+        strip = None
+
+
+def set_led_color(color):
+    global led_available
+    color = QColor(color)
+    if not color.isValid():
+        logger.error("Couleur de LED invalide : %s", color)
+        return
+
+    if not led_available:
+        return
+
+    try:
+        led_color = Color(color.red(), color.green(), color.blue())
+        for index in range(LED_COUNT):
+            strip.setPixelColor(index, led_color)
+        strip.show()
+    except Exception:
+        led_available = False
+        logger.exception("Échec lors du réglage de la couleur des LED.")
+
+
+def set_led_brightness(brightness):
+    global led_available
+    if not led_available:
+        return
+
+    try:
+        strip.setBrightness(max(0, min(255, int(brightness))))
+        strip.show()
+    except Exception:
+        led_available = False
+        logger.exception("Échec lors du réglage de la luminosité des LED.")
+
 
 class Backend(QObject):
     cpuTempChanged = Signal()
@@ -84,6 +143,7 @@ class Backend(QObject):
     bluetoothOperationResult = Signal(object, str, str)
     kioskAtStartupChanged = Signal()
     primaryColorChanged = Signal()
+    ledAvailabilityChanged = Signal()
 
     def __init__(self):
         super().__init__()
@@ -611,6 +671,24 @@ class Backend(QObject):
         settings.setValue("primaryColor", color)
         settings.sync()
         self.primaryColorChanged.emit()
+
+    @Slot(str)
+    def setDashboardLightColor(self, color):
+        was_available = led_available
+        set_led_color(color)
+        if was_available and not led_available:
+            self.ledAvailabilityChanged.emit()
+
+    @Property(bool, notify=ledAvailabilityChanged)
+    def ledsAvailable(self):
+        return led_available
+
+    @Slot(int)
+    def setDashboardLightBrightness(self, brightness):
+        was_available = led_available
+        set_led_brightness(brightness)
+        if was_available and not led_available:
+            self.ledAvailabilityChanged.emit()
 
     def _load_journal(self):
         stats = calculate_consumption_stats(load_entries())
