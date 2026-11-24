@@ -87,6 +87,9 @@ else:
         strip = PixelStrip(LED_COUNT, LED_PIN, 800000, 10, False, LED_BRIGHTNESS, 0,
                            ws.WS2811_STRIP_GRB)
         strip.begin()
+        for index in range(LED_COUNT):
+            strip.setPixelColor(index, Color(0, 0, 0))
+        strip.show()
         led_available = True
     except Exception:
         logger.exception("Initialisation de la bande LED impossible.")
@@ -241,6 +244,7 @@ class Backend(QObject):
         self._timer.start(300)
 
         self._led_animation_phase = 0.0
+        self._led_output_enabled = False
         self._led_animation_active = False
         self._led_startup_animation_active = False
         self._led_preview_active = False
@@ -756,7 +760,7 @@ class Backend(QObject):
         settings.sync()
         if color_changed:
             self.dashboardLightColorChanged.emit()
-        if not self._led_animation_active:
+        if self._led_output_enabled and not self._led_animation_active:
             set_led_color(color)
         if was_available and not led_available:
             self.ledAvailabilityChanged.emit()
@@ -808,6 +812,7 @@ class Backend(QObject):
         )
 
         if self._led_animation_active and not was_active and led_available:
+            self._led_output_enabled = True
             brightness = (
                 self._led_preview_brightness
                 if self._led_preview_active
@@ -823,6 +828,7 @@ class Backend(QObject):
             self._apply_led_brightness(self._led_brightness)
             set_led_color(settings.value("dashboardLightColor", "#ffc400", type=str))
         elif self._led_animation_active:
+            self._led_output_enabled = True
             brightness = (
                 self._led_preview_brightness
                 if self._led_preview_active
@@ -853,6 +859,15 @@ class Backend(QObject):
         set_led_brightness(brightness)
         if was_available and not led_available:
             self.ledAvailabilityChanged.emit()
+
+    @Slot()
+    def turnOffLeds(self):
+        self._led_animation_timer.stop()
+        self._led_animation_active = False
+        self._led_startup_animation_active = False
+        self._led_preview_active = False
+        self._led_output_enabled = False
+        set_led_color("#000000")
 
     def _load_journal(self):
         stats = calculate_consumption_stats(load_entries())
@@ -1085,6 +1100,7 @@ class Backend(QObject):
 
     @Slot()
     def shutdown(self):
+        self.turnOffLeds()
         if pc_dev:
             QCoreApplication.quit()
             return
@@ -1092,6 +1108,7 @@ class Backend(QObject):
 
     @Slot()
     def restart(self):
+        self.turnOffLeds()
         if pc_dev:
             QCoreApplication.quit()
             return
@@ -1105,6 +1122,7 @@ if app.platformName() in ("eglfs", "linuxfb"):
 
 engine = QQmlApplicationEngine()
 backend = Backend()
+app.aboutToQuit.connect(backend.turnOffLeds)
 engine.rootContext().setContextProperty("backend", backend)
 
 engine.load(Path(__file__).parent / "Main.qml")
