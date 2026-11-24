@@ -13,11 +13,11 @@ Item {
     property real gaugeSize: Math.min(width, height - 44)
 
     function clampedValue() {
-        return Math.max(0, Math.min(value, maximum))
+        return Math.max(0, Math.min(value, maximum));
     }
 
     function needleRotation() {
-        return startAngle + clampedValue() / maximum * sweep
+        return startAngle + clampedValue() / maximum * sweep;
     }
 
     Image {

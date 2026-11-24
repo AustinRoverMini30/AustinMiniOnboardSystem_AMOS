@@ -6,7 +6,7 @@ import "../components"
 Item {
     id: bluetoothPage
     property color primaryColor: "#2d5fff"
-    signal backRequested()
+    signal backRequested
 
     Rectangle {
         anchors.fill: parent
@@ -57,9 +57,7 @@ Item {
 
         EurostileText {
             Layout.fillWidth: true
-            color: backend.bluetoothStatus.indexOf("impossible") >= 0
-                   || backend.bluetoothStatus.indexOf("échoué") >= 0
-                   ? "#e5484d" : "#8a93a0"
+            color: backend.bluetoothStatus.indexOf("impossible") >= 0 || backend.bluetoothStatus.indexOf("échoué") >= 0 ? "#e5484d" : "#8a93a0"
             font.pixelSize: 15
             elide: Text.ElideRight
             text: backend.bluetoothStatus
@@ -96,7 +94,9 @@ Item {
                 spacing: 6
                 model: backend.bluetoothDevices
                 boundsBehavior: Flickable.StopAtBounds
-                ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+                ScrollBar.vertical: ScrollBar {
+                    policy: ScrollBar.AsNeeded
+                }
 
                 delegate: Rectangle {
                     required property var modelData
@@ -150,9 +150,9 @@ Item {
                             enabled: !backend.bluetoothBusy
                             onClicked: {
                                 if (modelData.connected)
-                                    backend.disconnectBluetoothDevice()
+                                    backend.disconnectBluetoothDevice();
                                 else
-                                    backend.connectBluetoothDevice(modelData.address)
+                                    backend.connectBluetoothDevice(modelData.address);
                             }
                         }
                     }

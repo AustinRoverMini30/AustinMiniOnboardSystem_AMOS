@@ -6,14 +6,10 @@ import "../components"
 Item {
     id: settingsPage
     property color primaryColor: "#2d5fff"
-    signal bluetoothRequested()
-    signal updateRequested()
-    signal startupRequested()
-    property var primaryColorOptions: [
-        "#2d5fff", "#00b4ff", "#00c853", "#76d600",
-        "#ffc400", "#ff7a00", "#ff2d3d", "#ff2d95",
-        "#b030ff", "#00a35c"
-    ]
+    signal bluetoothRequested
+    signal updateRequested
+    signal startupRequested
+    property var primaryColorOptions: ["#2d5fff", "#00b4ff", "#00c853", "#76d600", "#ffc400", "#ff7a00", "#ff2d3d", "#ff2d95", "#b030ff", "#00a35c"]
 
     ColumnLayout {
         anchors.fill: parent
@@ -73,8 +69,7 @@ Item {
                             height: 26
                             radius: 13
                             color: kioskStartupSwitch.down ? "#cccccc" : "#ffffff"
-                            border.color: kioskStartupSwitch.checked
-                                         ? settingsPage.primaryColor : "#999999"
+                            border.color: kioskStartupSwitch.checked ? settingsPage.primaryColor : "#999999"
                         }
                     }
 
@@ -132,10 +127,8 @@ Item {
                                 height: 36
                                 radius: width / 2
                                 color: colorOption.modelData
-                                border.width: settingsPage.primaryColor.toString()
-                                              === colorOption.modelData ? 3 : 1
-                                border.color: settingsPage.primaryColor.toString()
-                                              === colorOption.modelData ? "#ffffff" : "#59616c"
+                                border.width: settingsPage.primaryColor.toString() === colorOption.modelData ? 3 : 1
+                                border.color: settingsPage.primaryColor.toString() === colorOption.modelData ? "#ffffff" : "#59616c"
                             }
 
                             TapHandler {

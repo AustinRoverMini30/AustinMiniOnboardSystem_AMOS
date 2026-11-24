@@ -7,7 +7,7 @@ TextField {
     property bool active: false
     property string unit: ""
     property color primaryColor: "#2d5fff"
-    signal selected()
+    signal selected
 
     readOnly: true
     selectByMouse: false
@@ -24,7 +24,11 @@ TextField {
         color: "#13181e"
         border.width: field.active ? 2 : 1
         border.color: field.active ? field.primaryColor : "#2c333c"
-        Behavior on border.color { ColorAnimation { duration: 120 } }
+        Behavior on border.color {
+            ColorAnimation {
+                duration: 120
+            }
+        }
     }
 
     EurostileText {
@@ -36,5 +40,7 @@ TextField {
         text: field.unit
     }
 
-    TapHandler { onTapped: field.selected() }
+    TapHandler {
+        onTapped: field.selected()
+    }
 }

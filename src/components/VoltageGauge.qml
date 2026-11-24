@@ -12,26 +12,26 @@ Item {
     property real gaugeSize: Math.min(width, height - 20)
 
     function clampedValue() {
-        return Math.max(0, Math.min(value, maximum))
+        return Math.max(0, Math.min(value, maximum));
     }
 
     function needleRotation() {
-        var clamped = clampedValue()
+        var clamped = clampedValue();
         if (clamped <= 10)
-            return -40 - clamped / 10 * 5
+            return -40 - clamped / 10 * 5;
         if (clamped <= 11)
-            return -45 - (clamped - 10) * 6.75
+            return -45 - (clamped - 10) * 6.75;
         if (clamped <= 12)
-            return -51.75 - (clamped - 11) * 12.8
+            return -51.75 - (clamped - 11) * 12.8;
         if (clamped <= 13)
-            return -64.55 - (clamped - 12) * 17.2
+            return -64.55 - (clamped - 12) * 17.2;
         if (clamped <= 15)
-            return -81.75 - (clamped - 13) * 11.625
+            return -81.75 - (clamped - 13) * 11.625;
         if (clamped <= 16)
-            return -105 - (clamped - 15) * 11.43
+            return -105 - (clamped - 15) * 11.43;
         if (clamped <= 17)
-            return -116.43 - (clamped - 16) * 11.37
-        return -127.8 - (clamped - 17) * (8.2 / 3)
+            return -116.43 - (clamped - 16) * 11.37;
+        return -127.8 - (clamped - 17) * (8.2 / 3);
     }
 
     Image {
@@ -71,17 +71,17 @@ Item {
         id: failureVideoPlayer
         source: "../../assets/voltmeter_fail.mp4"
         videoOutput: failureVideoOutput
-        audioOutput: AudioOutput { muted: true }
+        audioOutput: AudioOutput {
+            muted: true
+        }
         loops: MediaPlayer.Infinite
 
         onMediaStatusChanged: {
-            if (voltageGauge.failureMode
-                    && (mediaStatus === MediaPlayer.LoadedMedia
-                        || mediaStatus === MediaPlayer.BufferedMedia))
-                play()
+            if (voltageGauge.failureMode && (mediaStatus === MediaPlayer.LoadedMedia || mediaStatus === MediaPlayer.BufferedMedia))
+                play();
         }
         onErrorOccurred: (error, errorString) => {
-            console.error("Erreur vidéo du voltmètre :", error, errorString)
+            console.error("Erreur vidéo du voltmètre :", error, errorString);
         }
     }
 
@@ -117,13 +117,13 @@ Item {
 
     onFailureModeChanged: {
         if (failureMode)
-            failureVideoPlayer.play()
+            failureVideoPlayer.play();
         else
-            failureVideoPlayer.stop()
+            failureVideoPlayer.stop();
     }
 
     Component.onCompleted: {
         if (failureMode)
-            failureVideoPlayer.play()
+            failureVideoPlayer.play();
     }
 }

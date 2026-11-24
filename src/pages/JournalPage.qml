@@ -10,32 +10,32 @@ Item {
     property bool showHistory: false
 
     function addKey(key) {
-        if (!activeField) return
+        if (!activeField)
+            return;
         if (key === "<") {
-            activeField.text = activeField.text.slice(0, -1)
+            activeField.text = activeField.text.slice(0, -1);
         } else if (key === ".") {
-            if (!activeField.text.includes(".")
-                    && activeField.text.length > 0
-                    && activeField !== mileageField
-                    && activeField.text.length < fieldLimit(activeField)) {
-                activeField.text += key
+            if (!activeField.text.includes(".") && activeField.text.length > 0 && activeField !== mileageField && activeField.text.length < fieldLimit(activeField)) {
+                activeField.text += key;
             }
         } else if (activeField.text.length < fieldLimit(activeField)) {
-            activeField.text += key
+            activeField.text += key;
         }
     }
 
     function fieldLimit(field) {
-        if (field === mileageField) return 8
-        if (field === litresField) return 6
-        return 7
+        if (field === mileageField)
+            return 8;
+        if (field === litresField)
+            return 6;
+        return 7;
     }
 
     function clearFields() {
-        mileageField.clear()
-        litresField.clear()
-        priceField.clear()
-        activeField = mileageField
+        mileageField.clear();
+        litresField.clear();
+        priceField.clear();
+        activeField = mileageField;
     }
 
     ColumnLayout {
@@ -131,8 +131,7 @@ Item {
                         Layout.minimumHeight: 40
                         text: modelData === "<" ? "←" : modelData
                         font.pixelSize: 26
-                        enabled: !(modelData === "."
-                                   && journalPage.activeField === mileageField)
+                        enabled: !(modelData === "." && journalPage.activeField === mileageField)
                         onClicked: journalPage.addKey(modelData)
                     }
                 }
@@ -165,19 +164,14 @@ Item {
                             color: journalPage.primaryColor
                             font.pixelSize: 26
                             font.weight: Font.DemiBold
-                            text: !backend.journalAverageReady
-                                  ? "--"
-                                  : backend.journalAverage.toFixed(2) + " L/100"
+                            text: !backend.journalAverageReady ? "--" : backend.journalAverage.toFixed(2) + " L/100"
                         }
                         EurostileText {
                             Layout.fillWidth: true
                             color: "#8a93a0"
                             font.pixelSize: 12
                             elide: Text.ElideRight
-                            text: backend.journalRows.length < 1
-                                  ? "Aucune entrée"
-                                  : "Dernière " + backend.journalLast.toFixed(2)
-                                    + "  •  " + backend.journalTotalKm.toFixed(0) + " km"
+                            text: backend.journalRows.length < 1 ? "Aucune entrée" : "Dernière " + backend.journalLast.toFixed(2) + "  •  " + backend.journalTotalKm.toFixed(0) + " km"
                         }
                     }
                 }
@@ -191,9 +185,8 @@ Item {
                     primary: true
                     fillColor: journalPage.primaryColor
                     onClicked: {
-                        if (backend.saveJournalEntry(
-                                    mileageField.text, litresField.text, priceField.text)) {
-                            journalPage.clearFields()
+                        if (backend.saveJournalEntry(mileageField.text, litresField.text, priceField.text)) {
+                            journalPage.clearFields();
                         }
                     }
                 }

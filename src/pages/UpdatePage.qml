@@ -5,7 +5,7 @@ import "../components"
 Item {
     id: updatePage
     property color primaryColor: "#2d5fff"
-    signal backRequested()
+    signal backRequested
 
     Rectangle {
         anchors.fill: parent
@@ -59,11 +59,7 @@ Item {
             font.weight: Font.Medium
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
-            text: backend.updateAvailable
-                ? (backend.updateSource === "usb"
-                   ? "Version sur USB : " : "Nouvelle version : ")
-                  + backend.latestVersion
-                : backend.updateStatus
+            text: backend.updateAvailable ? (backend.updateSource === "usb" ? "Version sur USB : " : "Nouvelle version : ") + backend.latestVersion : backend.updateStatus
         }
 
         Item {
@@ -86,7 +82,9 @@ Item {
                 color: updatePage.primaryColor
 
                 Behavior on width {
-                    NumberAnimation { duration: 150 }
+                    NumberAnimation {
+                        duration: 150
+                    }
                 }
             }
 
@@ -125,10 +123,7 @@ Item {
 
             DashButton {
                 primaryColor: updatePage.primaryColor
-                text: backend.updateInProgress
-                    ? "En cours..."
-                    : (backend.updateSource === "usb"
-                       ? "Installer USB" : "Télécharger")
+                text: backend.updateInProgress ? "En cours..." : (backend.updateSource === "usb" ? "Installer USB" : "Télécharger")
                 implicitWidth: 190
                 primary: true
                 fillColor: updatePage.primaryColor

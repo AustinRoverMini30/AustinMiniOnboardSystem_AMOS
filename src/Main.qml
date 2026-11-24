@@ -22,8 +22,14 @@ ApplicationWindow {
     Rectangle {
         anchors.fill: parent
         gradient: Gradient {
-            GradientStop { position: 0.0; color: "#171c23" }
-            GradientStop { position: 1.0; color: "#0d1014" }
+            GradientStop {
+                position: 0.0
+                color: "#171c23"
+            }
+            GradientStop {
+                position: 1.0
+                color: "#0d1014"
+            }
         }
     }
 
@@ -32,10 +38,16 @@ ApplicationWindow {
         anchors.fill: parent
 
         ClockPage {}
-        SystemPage { primaryColor: root.primaryColor }
+        SystemPage {
+            primaryColor: root.primaryColor
+        }
         VoltagePage {}
-        JournalPage { primaryColor: root.primaryColor }
-        MediaPage { primaryColor: root.primaryColor }
+        JournalPage {
+            primaryColor: root.primaryColor
+        }
+        MediaPage {
+            primaryColor: root.primaryColor
+        }
         SettingsPage {
             primaryColor: root.primaryColor
             onBluetoothRequested: root.showBluetoothPage = true
@@ -83,7 +95,11 @@ ApplicationWindow {
             implicitHeight: 8
             radius: 4
             color: index === swipe.currentIndex ? root.primaryColor : "#3a424d"
-            Behavior on color { ColorAnimation { duration: 150 } }
+            Behavior on color {
+                ColorAnimation {
+                    duration: 150
+                }
+            }
         }
     }
 
@@ -143,7 +159,9 @@ ApplicationWindow {
         width: 360
         padding: 24
 
-        Overlay.modal: Rectangle { color: "#b0000000" }
+        Overlay.modal: Rectangle {
+            color: "#b0000000"
+        }
 
         background: Rectangle {
             radius: 20
@@ -182,8 +200,8 @@ ApplicationWindow {
                 palette.buttonText: "#ffffff"
                 icon.color: "#ffffff"
                 onClicked: {
-                    powerDialog.close()
-                    backend.shutdown()
+                    powerDialog.close();
+                    backend.shutdown();
                 }
             }
 
@@ -192,8 +210,8 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 text: "Redémarrer"
                 onClicked: {
-                    powerDialog.close()
-                    backend.restart()
+                    powerDialog.close();
+                    backend.restart();
                 }
             }
         }
@@ -214,9 +232,9 @@ ApplicationWindow {
         timeout: 8000
         Component.onCompleted: {
             if (backend.kioskAtStartup)
-                kioskOverlay.start()
+                kioskOverlay.start();
             else
-                start()
+                start();
         }
     }
 }

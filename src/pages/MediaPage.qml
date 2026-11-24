@@ -1,4 +1,3 @@
-
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
@@ -16,29 +15,28 @@ Item {
 
     function playTrack(index) {
         if (!selectedAlbum || index < 0 || index >= selectedAlbum.tracks.length)
-            return
-        playbackTracks = selectedAlbum.tracks
-        playbackAlbumName = selectedAlbum.name
-        playQueuedTrack(index)
+            return;
+        playbackTracks = selectedAlbum.tracks;
+        playbackAlbumName = selectedAlbum.name;
+        playQueuedTrack(index);
     }
 
     function playQueuedTrack(index) {
         if (index < 0 || index >= playbackTracks.length)
-            return
-        currentTrackIndex = index
-        audioPlayer.source = playbackTracks[index].url
-        audioPlayer.play()
+            return;
+        currentTrackIndex = index;
+        audioPlayer.source = playbackTracks[index].url;
+        audioPlayer.play();
     }
 
     function nextTrack() {
         if (playbackTracks.length > 0)
-            playQueuedTrack((currentTrackIndex + 1) % playbackTracks.length)
+            playQueuedTrack((currentTrackIndex + 1) % playbackTracks.length);
     }
 
     function previousTrack() {
         if (playbackTracks.length > 0)
-            playQueuedTrack((currentTrackIndex - 1 + playbackTracks.length)
-                            % playbackTracks.length)
+            playQueuedTrack((currentTrackIndex - 1 + playbackTracks.length) % playbackTracks.length);
     }
 
     AudioOutput {
@@ -52,18 +50,18 @@ Item {
         audioOutput: audioOutput
 
         onMediaStatusChanged: {
-            console.log("AMOS MEDIA STATUS :", mediaStatus)
+            console.log("AMOS MEDIA STATUS :", mediaStatus);
 
             if (mediaStatus === MediaPlayer.EndOfMedia)
-                mediaPage.nextTrack()
+                mediaPage.nextTrack();
         }
 
         onPlaybackStateChanged: {
-            console.log("AMOS AUDIO STATE :", playbackState)
+            console.log("AMOS AUDIO STATE :", playbackState);
         }
 
         onErrorOccurred: (error, errorString) => {
-            console.error("AMOS AUDIO ERROR :", error, errorString)
+            console.error("AMOS AUDIO ERROR :", error, errorString);
         }
     }
 
@@ -125,7 +123,9 @@ Item {
                 cellHeight: cellWidth
                 model: backend.musicAlbums
                 boundsBehavior: Flickable.StopAtBounds
-                ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+                ScrollBar.vertical: ScrollBar {
+                    policy: ScrollBar.AsNeeded
+                }
 
                 delegate: Item {
                     id: albumCover
@@ -195,7 +195,9 @@ Item {
                 spacing: 4
                 model: mediaPage.selectedAlbum ? mediaPage.selectedAlbum.tracks : []
                 boundsBehavior: Flickable.StopAtBounds
-                ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+                ScrollBar.vertical: ScrollBar {
+                    policy: ScrollBar.AsNeeded
+                }
 
                 delegate: Rectangle {
                     id: trackRow
@@ -203,10 +205,7 @@ Item {
                     width: trackList.width
                     height: 42
                     radius: 8
-                    color: mediaPage.selectedAlbum
-                           && mediaPage.playbackAlbumName === mediaPage.selectedAlbum.name
-                           && mediaPage.currentTrackIndex === trackRow.modelData.number - 1
-                           ? "#252d38" : "transparent"
+                    color: mediaPage.selectedAlbum && mediaPage.playbackAlbumName === mediaPage.selectedAlbum.name && mediaPage.currentTrackIndex === trackRow.modelData.number - 1 ? "#252d38" : "transparent"
 
                     RowLayout {
                         anchors.fill: parent
@@ -218,11 +217,7 @@ Item {
                             Layout.preferredWidth: 30
                             color: mediaPage.primaryColor
                             font.pixelSize: 15
-                            text: mediaPage.selectedAlbum
-                                  && mediaPage.playbackAlbumName === mediaPage.selectedAlbum.name
-                                  && mediaPage.currentTrackIndex
-                                     === trackRow.modelData.number - 1
-                                  ? "♪" : trackRow.modelData.number
+                            text: mediaPage.selectedAlbum && mediaPage.playbackAlbumName === mediaPage.selectedAlbum.name && mediaPage.currentTrackIndex === trackRow.modelData.number - 1 ? "♪" : trackRow.modelData.number
                         }
 
                         EurostileText {
@@ -264,9 +259,7 @@ Item {
                         color: "#ffffff"
                         font.pixelSize: 15
                         elide: Text.ElideRight
-                        text: mediaPage.currentTrackIndex >= 0
-                              ? mediaPage.playbackTracks[mediaPage.currentTrackIndex].title
-                              : "Aucune piste en cours"
+                        text: mediaPage.currentTrackIndex >= 0 ? mediaPage.playbackTracks[mediaPage.currentTrackIndex].title : "Aucune piste en cours"
                     }
 
                     EurostileText {
@@ -274,8 +267,7 @@ Item {
                         color: "#8a93a0"
                         font.pixelSize: 12
                         elide: Text.ElideRight
-                        text: mediaPage.currentTrackIndex >= 0
-                              ? mediaPage.playbackAlbumName : "Choisissez un album"
+                        text: mediaPage.currentTrackIndex >= 0 ? mediaPage.playbackAlbumName : "Choisissez un album"
                     }
                 }
 
@@ -301,15 +293,14 @@ Item {
 
                     onClicked: {
                         if (audioPlayer.playbackState === MediaPlayer.PlayingState) {
-                            audioPlayer.pause()
+                            audioPlayer.pause();
                         } else if (mediaPage.currentTrackIndex >= 0) {
-                            audioPlayer.play()
-                        } else if (mediaPage.selectedAlbum
-                                   && mediaPage.selectedAlbum.tracks.length > 0) {
-                            mediaPage.playTrack(0)
+                            audioPlayer.play();
+                        } else if (mediaPage.selectedAlbum && mediaPage.selectedAlbum.tracks.length > 0) {
+                            mediaPage.playTrack(0);
                         } else if (backend.musicAlbums.length > 0) {
-                            mediaPage.selectedAlbum = backend.musicAlbums[0]
-                            mediaPage.playTrack(0)
+                            mediaPage.selectedAlbum = backend.musicAlbums[0];
+                            mediaPage.playTrack(0);
                         }
                     }
                 }

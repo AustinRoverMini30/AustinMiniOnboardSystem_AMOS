@@ -7,8 +7,8 @@ import "../components"
 Item {
     id: startupPage
     property color primaryColor: "#2d5fff"
-    signal previewRequested()
-    signal backRequested()
+    signal previewRequested
+    signal backRequested
 
     Rectangle {
         anchors.fill: parent
@@ -62,7 +62,9 @@ Item {
             cellHeight: 174
             model: backend.bootVideos
             boundsBehavior: Flickable.StopAtBounds
-            ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+            ScrollBar.vertical: ScrollBar {
+                policy: ScrollBar.AsNeeded
+            }
 
             delegate: Rectangle {
                 id: videoCard

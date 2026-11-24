@@ -20,17 +20,27 @@ Button {
 
     opacity: enabled ? 1.0 : 0.4
     scale: down ? 0.96 : 1.0
-    Behavior on scale { NumberAnimation { duration: 90 } }
+    Behavior on scale {
+        NumberAnimation {
+            duration: 90
+        }
+    }
 
     background: Rectangle {
         radius: 14
         border.width: 1
         border.color: (control.checked || control.primary) ? "transparent" : "#2c333c"
         color: {
-            if (control.checked) return control.checkedColor
-            if (control.primary) return control.fillColor
-            return control.down ? "#2c333c" : control.fillColor
+            if (control.checked)
+                return control.checkedColor;
+            if (control.primary)
+                return control.fillColor;
+            return control.down ? "#2c333c" : control.fillColor;
         }
-        Behavior on color { ColorAnimation { duration: 150 } }
+        Behavior on color {
+            ColorAnimation {
+                duration: 150
+            }
+        }
     }
 }
