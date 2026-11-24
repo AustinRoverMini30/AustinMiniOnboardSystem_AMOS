@@ -45,6 +45,11 @@ Chaque vue de l'application est définie dans son propre fichier sous
 `src/components/`, tandis que `src/Main.qml` assemble les pages et les contrôles
 globaux.
 
+Les outils Qt 6 `qmlformat` et `qmllint` permettent de formater et vérifier les
+fichiers QML avec `make format` et `make lint`. `make format-check` vérifie le
+formatage sans modifier les fichiers. La CI exécute automatiquement le formatage
+et l'analyse statique sur les pull requests et les push sur `master`.
+
 ### Bluetooth
 
 Depuis la page Bluetooth, lancez une recherche et sélectionnez **Connecter**
