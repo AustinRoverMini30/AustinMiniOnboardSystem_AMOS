@@ -104,7 +104,33 @@ Item {
     }
 
     onPreviewActiveChanged: backend.setLedAnimationPreview(previewActive)
-    onAnimationModeChanged: colorCyclePhase = 0
+    onAnimationModeChanged: {
+        colorCyclePhase = 0
+        const selectedIndex = animationOptions.findIndex(
+            option => option.mode === animationMode
+        )
+        if (selectedIndex >= 0 && animationSelector.currentIndex !== selectedIndex)
+            animationSelector.currentIndex = selectedIndex
+    }
+
+    function selectAnimationPage(index) {
+        if (index >= 0 && index < animationOptions.length) {
+            const mode = animationOptions[index].mode
+            if (mode !== backend.dashboardLightAnimationMode)
+                backend.setDashboardLightAnimation(mode)
+        }
+    }
+
+    function animationIndexForMode(mode) {
+        const index = animationOptions.findIndex(option => option.mode === mode)
+        return index >= 0 ? index : 0
+    }
+
+    function animationOptionAtOffset(index, offset) {
+        const optionIndex = (index + offset + animationOptions.length)
+                            % animationOptions.length
+        return animationOptions[optionIndex]
+    }
 
     NumberAnimation on colorCyclePhase {
         from: 0
@@ -373,45 +399,73 @@ Item {
         anchors.top: parent.top
         anchors.topMargin: 16
         anchors.horizontalCenter: parent.horizontalCenter
-        width: animationSelector.implicitWidth + 24
-        height: animationSelector.implicitHeight + 20
+        width: animationSelector.width + 20
+        height: animationSelector.height + 16
         radius: 12
         color: "#cc13181e"
         border.width: 1
         border.color: "#59616c"
         z: 3
 
-        Row {
+        SwipeView {
             id: animationSelector
             anchors.centerIn: parent
-            spacing: 8
+            width: 220
+            height: 64
+            clip: true
+            currentIndex: dashboardLightAnimation.animationIndexForMode(
+                              dashboardLightAnimation.animationMode
+                          )
+            onCurrentIndexChanged: dashboardLightAnimation.selectAnimationPage(
+                                       currentIndex
+                                   )
 
             Repeater {
                 model: dashboardLightAnimation.animationOptions
 
-                delegate: Button {
+                delegate: Item {
                     id: animationButton
                     required property var modelData
-                    width: 132
-                    height: 54
-                    padding: 0
-                    onClicked: backend.setDashboardLightAnimation(modelData.mode)
+                    required property int index
+                    width: animationSelector.width
+                    height: animationSelector.height
 
-                    background: Rectangle {
+                    Rectangle {
+                        id: animationCard
+                        x: (animationSelector.width - width) / 2
+                        y: 5
+                        width: animationSelector.width - 20
+                        height: animationSelector.height - 10
                         radius: 8
-                        color: "#252a31"
-                        border.width: dashboardLightAnimation.animationMode === animationButton.modelData.mode ? 2 : 1
-                        border.color: dashboardLightAnimation.animationMode === animationButton.modelData.mode
-                                      ? dashboardLightAnimation.haloColor : "#59616c"
-                    }
+                        gradient: Gradient {
+                            GradientStop { position: 0; color: "#46515e" }
+                            GradientStop { position: 1; color: "#171b20" }
+                        }
+                        border.width: 2
+                        border.color: dashboardLightAnimation.haloColor
 
-                    contentItem: Text {
-                        text: animationButton.modelData.label
-                        color: "#ffffff"
-                        font.pixelSize: 13
-                        font.weight: Font.DemiBold
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
+                        Text {
+                            anchors.fill: parent
+                            anchors.margins: 12
+                            text: animationButton.modelData.label
+                            color: "#ffffff"
+                            font.pixelSize: 13
+                            font.weight: Font.DemiBold
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                            elide: Text.ElideRight
+                        }
+
+                        Rectangle {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            anchors.margins: 2
+                            height: 2
+                            radius: 1
+                            color: dashboardLightAnimation.haloColor
+                            opacity: 0.7
+                        }
                     }
                 }
             }
