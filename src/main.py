@@ -88,7 +88,7 @@ else:
     try:
         from rpi_ws281x import PixelStrip, Color, ws
 
-        LED_COUNT = 144
+        LED_COUNT = 87
         LED_PIN = 12
         LED_BRIGHTNESS = 80
 
