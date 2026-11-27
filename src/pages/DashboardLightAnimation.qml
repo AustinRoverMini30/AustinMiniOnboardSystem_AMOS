@@ -155,7 +155,16 @@ Item {
                  && dashboardLightAnimation.animationMode >= 3
     }
 
+    Item {
+        id: dashboardImageArea
+        anchors.centerIn: parent
+        width: Math.min(parent.width, parent.height * 1.5)
+        height: width / 1.5
+        clip: true
+    }
+
     Image {
+        parent: dashboardImageArea
         anchors.fill: parent
         source: "../../assets/dashboard_front.png"
         fillMode: Image.PreserveAspectFit
@@ -165,6 +174,7 @@ Item {
 
     Item {
         id: halo
+        parent: dashboardImageArea
         anchors.fill: parent
         z: 1
 
@@ -366,7 +376,7 @@ Item {
             height: lampRectangle.height + 26
             radius: height / 2
             color: Qt.rgba(haloColor.r, haloColor.g, haloColor.b, 0.85)
-            visible: dashboardLightAnimation.animationMode !== 0
+            visible: false
             layer.enabled: true
         }
 
@@ -388,6 +398,7 @@ Item {
     }
 
     Image {
+        parent: dashboardImageArea
         anchors.fill: parent
         source: "../../assets/dashboard_back.png"
         fillMode: Image.PreserveAspectFit
