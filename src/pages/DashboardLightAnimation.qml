@@ -410,13 +410,87 @@ Item {
         anchors.top: parent.top
         anchors.topMargin: 16
         anchors.horizontalCenter: parent.horizontalCenter
-        width: animationSelector.width + 20
+        width: animationSelector.width + 80
         height: animationSelector.height + 16
         radius: 12
         color: "#cc13181e"
         border.width: 1
         border.color: "#59616c"
         z: 3
+
+        Image {
+            id: leftChevronSource
+            anchors.left: parent.left
+            anchors.leftMargin: 8
+            anchors.verticalCenter: parent.verticalCenter
+            width: 24
+            height: 24
+            source: "../../assets/chevron-left.svg"
+            visible: false
+        }
+
+        MultiEffect {
+            id: leftChevron
+            anchors.fill: leftChevronSource
+            source: leftChevronSource
+            brightness: 1
+            colorization: 1
+            colorizationColor: dashboardLightAnimation.haloColor
+
+            SequentialAnimation on opacity {
+                running: dashboardLightAnimation.previewActive
+                loops: Animation.Infinite
+                NumberAnimation {
+                    from: 0.35
+                    to: 1
+                    duration: 650
+                    easing.type: Easing.InOutSine
+                }
+                NumberAnimation {
+                    from: 1
+                    to: 0.35
+                    duration: 650
+                    easing.type: Easing.InOutSine
+                }
+            }
+        }
+
+        Image {
+            id: rightChevronSource
+            anchors.right: parent.right
+            anchors.rightMargin: 8
+            anchors.verticalCenter: parent.verticalCenter
+            width: 24
+            height: 24
+            source: "../../assets/chevron-right.svg"
+            visible: false
+        }
+
+        MultiEffect {
+            id: rightChevron
+            anchors.fill: rightChevronSource
+            source: rightChevronSource
+            brightness: 1
+            colorization: 1
+            colorizationColor: dashboardLightAnimation.haloColor
+
+            SequentialAnimation on opacity {
+                running: dashboardLightAnimation.previewActive
+                loops: Animation.Infinite
+                NumberAnimation {
+                    from: 0.35
+                    to: 1
+                    duration: 650
+                    easing.type: Easing.InOutSine
+                }
+                NumberAnimation {
+                    from: 1
+                    to: 0.35
+                    duration: 650
+                    easing.type: Easing.InOutSine
+                }
+            }
+        }
 
         SwipeView {
             id: animationSelector
