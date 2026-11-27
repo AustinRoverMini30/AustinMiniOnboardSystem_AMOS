@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import math
 import mimetypes
 import re
@@ -42,6 +43,16 @@ from UpdateUtility import (
     restart_application,
 )
 from KilometerManager import calculate_consumption_stats, load_entries, save_entry
+from LedAnimations import (
+    ANIMATION_MODES,
+    EDGES_TO_CENTER_FILL,
+    GAUGE_FILL,
+    GAUGE_FILL_DURATION_MS,
+    GAUGE_FILL_TIMER_INTERVAL_MS,
+    build_animation_frame,
+)
+
+logger = logging.getLogger(__name__)
 
 pc_dev = False
 FAN_PIN = 18
@@ -53,6 +64,13 @@ MUSIC_ART_DIR = Path(QStandardPaths.writableLocation(
     QStandardPaths.StandardLocation.GenericCacheLocation
 )) / "amos" / "album-art"
 settings = QSettings("AMOS", "AustinMiniOnboardSystem_AMOS")
+
+LED_COUNT = 30
+LED_PIN = 18
+LED_BRIGHTNESS = 80
+strip = None
+Color = None
+led_available = False
 
 try:
     fan = OutputDevice(FAN_PIN, active_high=False, initial_value=False)
@@ -66,6 +84,83 @@ if (pc_dev):
     bus= None
 else:
     bus = SMBus(1)
+
+    try:
+        from rpi_ws281x import PixelStrip, Color, ws
+
+        LED_COUNT = 87
+        LED_PIN = 12
+        LED_BRIGHTNESS = 80
+
+        strip = PixelStrip(LED_COUNT, LED_PIN, 800000, 10, False, LED_BRIGHTNESS, 0,
+                           ws.WS2811_STRIP_GRB)
+        strip.begin()
+        for index in range(LED_COUNT):
+            strip.setPixelColor(index, Color(0, 0, 0))
+        strip.show()
+        led_available = True
+    except Exception:
+        logger.exception("Initialisation de la bande LED impossible.")
+        strip = None
+
+
+def set_led_color(color):
+    global led_available
+    color = QColor(color)
+    if not color.isValid():
+        logger.error("Couleur de LED invalide : %s", color)
+        return
+
+    if not led_available:
+        return
+
+    try:
+        led_color = Color(color.red(), color.green(), color.blue())
+        for index in range(LED_COUNT):
+            strip.setPixelColor(index, led_color)
+        strip.show()
+    except Exception:
+        led_available = False
+        logger.exception("Échec lors du réglage de la couleur des LED.")
+
+
+def set_led_brightness(brightness):
+    global led_available
+    if not led_available:
+        return
+
+    try:
+        strip.setBrightness(max(0, min(255, int(brightness))))
+        strip.show()
+    except Exception:
+        led_available = False
+        logger.exception("Échec lors du réglage de la luminosité des LED.")
+
+
+def set_led_animation(mode, phase):
+    global led_available
+    if not led_available:
+        return
+
+    try:
+        base_color = QColor(settings.value("dashboardLightColor", "#ffc400", type=str))
+        if not base_color.isValid():
+            logger.error("Couleur mémorisée des LED invalide.")
+            return
+
+        frame = build_animation_frame(
+            mode,
+            phase,
+            LED_COUNT,
+            (base_color.red(), base_color.green(), base_color.blue()),
+        )
+        for index, rgb in enumerate(frame):
+            strip.setPixelColor(index, Color(*rgb))
+        strip.show()
+    except Exception:
+        led_available = False
+        logger.exception("Échec lors de l'animation des LED.")
+
 
 class Backend(QObject):
     cpuTempChanged = Signal()
@@ -84,6 +179,10 @@ class Backend(QObject):
     bluetoothOperationResult = Signal(object, str, str)
     kioskAtStartupChanged = Signal()
     primaryColorChanged = Signal()
+    ledAvailabilityChanged = Signal()
+    ledAnimationModeChanged = Signal()
+    dashboardLightColorChanged = Signal()
+    dashboardLightBrightnessChanged = Signal()
 
     def __init__(self):
         super().__init__()
@@ -114,6 +213,20 @@ class Backend(QObject):
         self._bluetooth_connected_address = ""
         self._voltage = 0.0
         self._voltmeter_available = False
+        try:
+            self._led_animation_mode = settings.value(
+                "dashboardLightAnimationMode", 0, type=int
+            )
+        except (TypeError, ValueError):
+            self._led_animation_mode = 0
+        if self._led_animation_mode not in ANIMATION_MODES:
+            self._led_animation_mode = 0
+        self._led_brightness = settings.value(
+            "dashboardLightBrightness", LED_BRIGHTNESS, type=int
+        )
+        self._led_brightness = max(0, min(255, self._led_brightness))
+        self._led_preview_brightness = self._led_brightness
+        set_led_brightness(self._led_brightness)
         self._load_journal()
 
         self.updateCheckResult.connect(self._handle_update_check)
@@ -127,6 +240,14 @@ class Backend(QObject):
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._update)
         self._timer.start(300)
+
+        self._led_animation_phase = 0.0
+        self._led_output_enabled = False
+        self._led_animation_active = False
+        self._led_startup_animation_active = False
+        self._led_preview_active = False
+        self._led_animation_timer = QTimer(self)
+        self._led_animation_timer.timeout.connect(self._update_led_animation)
 
         self._usb_update_timer = QTimer(self)
         self._usb_update_timer.timeout.connect(self._check_usb_update)
@@ -155,6 +276,35 @@ class Backend(QObject):
         self.cpuTempChanged.emit()
         self.speedChanged.emit()
         self.gaugesChanged.emit()
+
+    def _update_led_animation(self):
+        if not led_available:
+            self._led_animation_timer.stop()
+            return
+        if not self._led_animation_active:
+            return
+        if self._led_animation_mode in (GAUGE_FILL, EDGES_TO_CENTER_FILL):
+            frame_count = GAUGE_FILL_DURATION_MS // GAUGE_FILL_TIMER_INTERVAL_MS
+            self._led_animation_phase = min(
+                1.0,
+                round(
+                    (self._led_animation_phase + 1 / frame_count) * frame_count
+                ) / frame_count,
+            )
+        elif self._led_animation_mode == 3:
+            self._led_animation_phase = min(1.0, self._led_animation_phase + 0.02)
+        else:
+            self._led_animation_phase = (self._led_animation_phase + 0.02) % 1.0
+        was_available = led_available
+        set_led_animation(self._led_animation_mode, self._led_animation_phase)
+        if self._led_animation_mode in (
+            3,
+            GAUGE_FILL,
+            EDGES_TO_CENTER_FILL,
+        ) and self._led_animation_phase >= 1:
+            self._led_animation_timer.stop()
+        if was_available and not led_available:
+            self.ledAvailabilityChanged.emit()
 
     def _voltage_loop(self):
         """Lit l'INA226 en arrière-plan sans bloquer l'interface Qt."""
@@ -612,6 +762,140 @@ class Backend(QObject):
         settings.sync()
         self.primaryColorChanged.emit()
 
+    @Slot(str)
+    def setDashboardLightColor(self, color):
+        was_available = led_available
+        parsed_color = QColor(color)
+        if not parsed_color.isValid():
+            logger.error("Couleur de LED invalide : %s", color)
+            return
+        color = parsed_color.name()
+        color_changed = color != self.dashboardLightColor
+        settings.setValue("dashboardLightColor", color)
+        settings.sync()
+        if color_changed:
+            self.dashboardLightColorChanged.emit()
+        if self._led_output_enabled and not self._led_animation_active:
+            set_led_color(color)
+        if was_available and not led_available:
+            self.ledAvailabilityChanged.emit()
+
+    @Property(bool, notify=ledAvailabilityChanged)
+    def ledsAvailable(self):
+        return led_available
+
+    @Property(str, notify=dashboardLightColorChanged)
+    def dashboardLightColor(self):
+        return settings.value("dashboardLightColor", "#ffc400", type=str)
+
+    @Property(int, notify=dashboardLightBrightnessChanged)
+    def dashboardLightBrightness(self):
+        return self._led_brightness
+
+    @Property(int, notify=ledAnimationModeChanged)
+    def dashboardLightAnimationMode(self):
+        return self._led_animation_mode
+
+    @Slot(int)
+    def setDashboardLightAnimation(self, mode):
+        mode = int(mode)
+        if mode not in ANIMATION_MODES or mode == self._led_animation_mode:
+            return
+        self._led_animation_mode = mode
+        settings.setValue("dashboardLightAnimationMode", mode)
+        settings.sync()
+        self.ledAnimationModeChanged.emit()
+        if self._led_animation_active:
+            self._led_animation_phase = 0.0
+            self._led_animation_timer.start(
+                GAUGE_FILL_TIMER_INTERVAL_MS
+                if mode in (GAUGE_FILL, EDGES_TO_CENTER_FILL)
+                else 100
+            )
+            self._update_led_animation()
+
+    @Slot(bool)
+    def setLedStartupAnimation(self, active):
+        self._set_led_animation_source("startup", active)
+
+    @Slot(bool)
+    def setLedAnimationPreview(self, active):
+        self._set_led_animation_source("preview", active)
+
+    def _set_led_animation_source(self, source, active):
+        active = bool(active)
+        if source == "startup":
+            self._led_startup_animation_active = active
+        else:
+            self._led_preview_active = active
+
+        was_active = self._led_animation_active
+        self._led_animation_active = (
+            self._led_startup_animation_active or self._led_preview_active
+        )
+
+        if self._led_animation_active and not was_active and led_available:
+            self._led_output_enabled = True
+            brightness = (
+                self._led_preview_brightness
+                if self._led_preview_active
+                else self._led_brightness
+            )
+            self._apply_led_brightness(brightness)
+            self._led_animation_phase = 0.0
+            self._update_led_animation()
+            if led_available:
+                self._led_animation_timer.start(
+                    GAUGE_FILL_TIMER_INTERVAL_MS
+                    if self._led_animation_mode in (GAUGE_FILL, EDGES_TO_CENTER_FILL)
+                    else 100
+                )
+        elif was_active and not self._led_animation_active:
+            self._led_animation_timer.stop()
+            self._apply_led_brightness(self._led_brightness)
+            set_led_color(settings.value("dashboardLightColor", "#ffc400", type=str))
+        elif self._led_animation_active:
+            self._led_output_enabled = True
+            brightness = (
+                self._led_preview_brightness
+                if self._led_preview_active
+                else self._led_brightness
+            )
+            self._apply_led_brightness(brightness)
+
+    @Slot(int)
+    def setDashboardLightBrightness(self, brightness):
+        brightness = max(0, min(255, int(brightness)))
+        if brightness == self._led_brightness:
+            return
+        self._led_brightness = brightness
+        settings.setValue("dashboardLightBrightness", brightness)
+        settings.sync()
+        self.dashboardLightBrightnessChanged.emit()
+        if not self._led_animation_active:
+            self._apply_led_brightness(brightness)
+
+    @Slot(int)
+    def setDashboardLightPreviewBrightness(self, brightness):
+        self._led_preview_brightness = max(0, min(255, int(brightness)))
+        if self._led_preview_active:
+            self._apply_led_brightness(self._led_preview_brightness)
+
+    def _apply_led_brightness(self, brightness):
+        was_available = led_available
+        set_led_brightness(brightness)
+        if was_available and not led_available:
+            self.ledAvailabilityChanged.emit()
+
+    @Slot()
+    def turnOffLeds(self):
+        self._led_animation_timer.stop()
+        self._led_animation_active = False
+        self._led_startup_animation_active = False
+        self._led_preview_active = False
+        self._led_output_enabled = False
+        set_led_color("#000000")
+
     def _load_journal(self):
         stats = calculate_consumption_stats(load_entries())
         if not stats:
@@ -666,8 +950,12 @@ class Backend(QObject):
 
     @Slot(float)
     def _handle_update_progress(self, progress):
+        progress = float(progress)
+        if progress < 0:
+            self._set_update_state(update_progress=-1.0)
+            return
         progress = max(0.0, min(1.0, float(progress)))
-        if progress < self._update_progress:
+        if self._update_progress >= 0 and progress < self._update_progress:
             return
         self._set_update_state(update_progress=progress)
 
@@ -777,13 +1065,12 @@ class Backend(QObject):
             return
         self._set_update_state(
             update_in_progress=True,
-            update_progress=0.0,
+            update_progress=0.0 if self._update_source == "online" else -1.0,
             update_status="Démarrage...",
         )
 
-        def progress(downloaded, total):
-            if total > 0:
-                self.updateProgressResult.emit(downloaded / total)
+        def progress(value):
+            self.updateProgressResult.emit(value)
 
         def status(message):
             self.updateStatusResult.emit(message)
@@ -799,6 +1086,7 @@ class Backend(QObject):
                 success = install_update_archive(
                     self._usb_update_archive,
                     self._latest_version,
+                    progress_callback=progress,
                     status_callback=tracked_status,
                 )
             else:
@@ -839,6 +1127,7 @@ class Backend(QObject):
 
     @Slot()
     def shutdown(self):
+        self.turnOffLeds()
         if pc_dev:
             QCoreApplication.quit()
             return
@@ -846,6 +1135,7 @@ class Backend(QObject):
 
     @Slot()
     def restart(self):
+        self.turnOffLeds()
         if pc_dev:
             QCoreApplication.quit()
             return
@@ -859,6 +1149,7 @@ if app.platformName() in ("eglfs", "linuxfb"):
 
 engine = QQmlApplicationEngine()
 backend = Backend()
+app.aboutToQuit.connect(backend.turnOffLeds)
 engine.rootContext().setContextProperty("backend", backend)
 
 engine.load(Path(__file__).parent / "Main.qml")
